@@ -49,8 +49,8 @@ public class PlayerMovement : MonoBehaviour
         Vector3 move = transform.right * x + transform.forward * z;
         controller.Move( move * spd * Time.deltaTime );
 
-        if (Input.GetButtonDown("Jump") && isGrounded) // default jump is "Space"
-            velo.y = Mathf.Sqrt(jumpHgt * downVal * grav); // sqrt( height * -2f * g)
+        if (Input.GetButtonDown("Jump") && isGrounded) // default jump is "Space".. send position to current ice square to leave crack
+            velo.y = Mathf.Sqrt(jumpHgt * downVal * grav); // jh= sqrt( height * -2f * g)
 
         //gravity
         velo.y += grav * Time.deltaTime;

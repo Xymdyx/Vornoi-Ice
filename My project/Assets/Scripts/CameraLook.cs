@@ -22,13 +22,8 @@ public class CameraLook : MonoBehaviour
         Cursor.lockState = CursorLockMode.Locked; //locks cursor to center of screen!
     }
 
-    //the main input loop for processing movement 
-    void inputLoop()
-    {
-        ;
-    }
 
-    //update the camera view based on input received
+    //update the camera view for reconstruct mode. Perhaps a separate camera?
     void updateView()
     {
 
