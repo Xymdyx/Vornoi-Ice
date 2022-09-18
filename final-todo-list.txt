@@ -1,0 +1,20 @@
+Vornoi-Ice Todo:
+
+1. look into making the ice layer interactable by pressing "F" to mark a spot
+for a Vornoi seed (perhaps leaving some sort of marking on the ice)
+	1a. find out how to convert global position -> local coordinates on the ice rink cube
+
+2. Figure out how to reconstruct a Vornoi diagram given a list of seeds (positions on the ice cube)
+	2a. Try just setting pixels on the ice cube object throughout the constant y position, and changing the pixel color
+	2b disable marking ice after reconstruction complete
+
+3. figure out how to build the Vornoi diagram in real-time.
+	3a. stretch goal: add ability to remove markers with "R"
+
+4. Figure out how to reset map
+
+5. Replace placeholder assets with Blender-made assets. 
+
+6. Stretch goal: add more levels
+
+7. Figure out how to do it with textures...?
