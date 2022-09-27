@@ -6,6 +6,7 @@ date: 9/6/22
 due: 11/22
  */
 
+//https://docs.unity3d.com/Manual/CollidersOverview.html
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -28,9 +29,30 @@ public class PlayerMovement : MonoBehaviour
     private float downVal = -2f;
     public float jumpHgt = 3f;
 
+    //needed for point sending
+    private bool onVornoi;
+    private VornoiObj vContact;
+
     void Start()
     {
-        // empty for now;
+        controller.detectCollisions = true;
+        onVornoi = false;
+        vContact = null;
+    }
+
+    void plantSeed()
+    {
+        if( vContact != null && Input.GetKeyDown("f") )
+        {
+            //get point
+            Vector3 plantPt = this.transform.position;
+            Collider vBoundingVol = vContact.GetComponent<Collider>();
+           
+            plantPt.y = vBoundingVol.bounds.max.y;
+            vContact.addSeed(plantPt);
+        }
+
+        return;
     }
 
     // Update is called once per frame
@@ -56,6 +78,33 @@ public class PlayerMovement : MonoBehaviour
         velo.y += grav * Time.deltaTime;
         controller.Move(velo * Time.deltaTime);
 
+        return;
+    }
+
+    /*Trigger message specific to CharacterController objects.
+     CharacterControllers simplify collisions to not need rigid bodies,
+    so other stuff isn't needed*/
+    private void OnControllerColliderHit(ControllerColliderHit hit)
+    {
+        GameObject go = hit.gameObject;
+        if(go.CompareTag("Vornoi") && !vContact ) //first enter Vornoi layer
+        {
+            onVornoi = true;
+            Debug.Log("GC hit Vornoi object");
+            Debug.Log("Collided with" + go.name);
+            vContact = go.GetComponent<VornoiObj>();
+
+            UIManager uiMgr = GameObject.FindObjectOfType<UIManager>();
+
+            if (uiMgr != null)
+                uiMgr.updateText("Collided with " + go.name);
+
+            return;
+        }
+
+        onVornoi = false;
+
+        //to simulate onCollisonEnter and onCollisionExit, use groundCheck
         return;
     }
 }

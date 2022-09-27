@@ -19,16 +19,21 @@ public class VornoiObj : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        seeds = new List<Vector3>();
+        seeds = null;
         isEnabled = true;
         isRealTime = false;
         seedColors = new List<Color>();
     }
 
-
-    void addSeed(Vector3 seedPos)
+    /*Method used to add Vornoi seeds if they aren't already in the list*/
+    public void addSeed(Vector3 seedPos)
     {
-        if (!seeds.Contains(seedPos))
+        if (seeds == null)
+        {
+            seeds = new List<Vector3>();
+            seeds.Add(seedPos);
+        }
+        else if (!seeds.Contains(seedPos))
             seeds.Add(seedPos);
 
         return;
@@ -45,4 +50,28 @@ public class VornoiObj : MonoBehaviour
         
     }
 
+    //triggers make objects not solid, which explained why the player was falling through earlier
+    //void OnCollisionEnter(Collision collision)
+    //{
+    //    //GameObject go = collision.gameObject;
+    //    //Debug.Log("In On coll w/ " + go.name + " of tag " + go.tag);
+    //    //if (collision.gameObject.CompareTag("Player"))
+    //    //{
+    //    //    Debug.Log("Collided with" + go.name);
+    //    //    UIManager uiMgr = GetComponentInParent<UIManager>();
+
+    //    //    if (uiMgr != null)
+    //    //        uiMgr.updateText("Collided with " + this.gameObject.name);
+
+    //    //}
+    //}
+    //void OnCollisionStay(Collision collision)
+    //{
+    //    //Debug.Log("Coll Stay");
+    //}
+
+    //void OnCollisionExit(Collision collision)
+    //{
+    //    //Debug.Log("Coll Exit");
+    //}
 }

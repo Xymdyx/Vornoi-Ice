@@ -11,12 +11,13 @@ public class UIManager : MonoBehaviour
     {
 
         textUI = transform.GetChild(0).GetComponent<TMPro.TextMeshProUGUI>();
-        Debug.Log(textUI.text);
-        textUI.text = "Hello there";
+        //Debug.Log(textUI.text);
+        updateText("Hello there");
     }
 
     public void updateText( string msg )
     {
+        textUI.text = msg;
     }
 
     // Update is called once per frame
