@@ -1,0 +1,30 @@
+* Sam Ford (stf8464)
+
+* Vornoitic (placeholder title)
+
+* This project will allow the user to construct a Vornoi diagram by planting Vornoi vertices and then being able to see what
+the constructed Vornoi diagram looks like at a fixed angle and to be able to walk along the surface with the imprinted diagram (currently an ice rink).
+I think a first-person app for making Vornoi diagrams where one can actually move around on top of the diagram would help illustrate the concept.
+
+* References include David Mount's lecture on Vornoi diagrams:
+http://www.cs.umd.edu/class/fall2021/cmsc754/Lects/lect10-vor.pdf
+http://www.cs.umd.edu/class/fall2021/cmsc754/Notes/lect10-notes.pdf
+
+Unity game engine documentation:
+https://docs.unity3d.com/Manual/index.html.
+
+Vornoi construction algorithm:
+https://en.wikipedia.org/wiki/Fortune%27s_algorithm - (n logn Fortune algo)
+
+* Timeline: 
+Week 1-4 I have a placeholder ice rink and first-person movement implemented. Github repo made.
+Week 5 - allow player to plant Vornoi seeds on the Vornoi surface, store in data structure that stores seed coordinates given in the Vorno surface's local coordinates
+Week 6 - implement data structures for Vornoi plane-sweep construction after the seeds have been planted. (Tenatively using Fortune's algorithm involving "plane-sweep")
+Week 7-9 - implement Vornoi plane-sweep construction. Currently alter pixels on the surface to make the lines around the seeds. Figure out how to clear the diagram, too.
+Week 10 and 11 - make Blender assets for an ice-rink level. Keep the ice floor and constructed lines the same unless time permits.
+Week 12- add title screen and instructions on how the app works 
+Week 13 - if time permits, enable a real-time construction mode where the Vornoi diagram is built as the user plants seeds
+Week 14+ - if time permits, add animation for the "beach line" and "sweep line" construction of Fortune's algorithm when in "construction mode"
+
+*Responsibilities:
+I'll be doing all the work given the small scope of the project.
