@@ -8,7 +8,7 @@ due: 11/22
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+using FortuneAlgo; //for MinHeap, RBT, and algo itself.
 public class VornoiObj : MonoBehaviour
 {
     private List<Vector3> seeds; //list of Vornoi seeds
