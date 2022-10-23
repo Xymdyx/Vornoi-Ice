@@ -6,10 +6,6 @@
 https://www.programiz.com/dsa/red-black-tree tutorial I followed
 https://www.cs.usfca.edu/~galles/visualization/RedBlack.html Animated App for comparison (dups in left here)
 */
-using System.Collections.Generic;
-using System;
-using System.Text;
-
 namespace FortuneAlgo
 {
     //reps a node in the RedBlackTree
@@ -33,12 +29,12 @@ namespace FortuneAlgo
         //constructor
         public RBNode(float key, T obj = default!, int color = 1)
         {
-            this.color = color; // 1 for red, 0 for black
-            this.key = key;
-            this.parent = null!;
-            this.left = null!;
-            this.right = null!;
-            this.obj = obj;
+            this._color = color; // 1 for red, 0 for black
+            this._key = key;
+            this._parent = null!;
+            this._left = null!;
+            this._right = null!;
+            this._obj = obj;
         }
 
         //hacky code that's going to be refactored because this shouldn't be a thing in an RBT

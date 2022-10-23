@@ -17,12 +17,17 @@ namespace CSHarpSandBox
         //can be up to length 3. Has cross-link with region nodes.
         private List<Vector2> _eventSites;
         private int _weight;
+        private RegionNode _vorVertRegion;
+
+        //user for cross-link between vertexEvents and triples.
+        public RegionNode vorVertRegion { get => this._vorVertRegion; set => this._vorVertRegion = value; }
 
         //single site constructor
         public VoronoiEvent(Vector2 eventSite, int weight)
         {
             this._eventSites = new List<Vector2>{eventSite};
             this._weight = weight;
+            this._vorVertRegion = null!;
         }
 
         //multiple site constructor
@@ -33,6 +38,8 @@ namespace CSHarpSandBox
 
             this._eventSites = eventSites;
             this._weight = weight;
+            this._vorVertRegion = null!;
+
         }
     }
 }
