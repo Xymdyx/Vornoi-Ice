@@ -6,6 +6,9 @@
 https://www.programiz.com/dsa/red-black-tree tutorial I followed
 https://www.cs.usfca.edu/~galles/visualization/RedBlack.html Animated App for comparison (dups in left here)
 */
+using System;
+using System.Collections.Generic;
+using System.Text;
 namespace FortuneAlgo
 {
     //reps a node in the RedBlackTree
