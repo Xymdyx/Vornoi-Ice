@@ -32,17 +32,23 @@ public class PlayerMovement : MonoBehaviour
     //needed for point sending
     private bool onVornoi;
     private VornoiObj vContact;
+    UIManager uiMgr;
+
 
     void Start()
     {
         controller.detectCollisions = true;
         onVornoi = false;
         vContact = null;
+        uiMgr = GameObject.FindObjectOfType<UIManager>();
     }
 
+    /*
+     * Sends player planted seed to Voronoi Surface for processing
+     */
     void plantSeed()
     {
-        if( vContact != null && Input.GetKeyDown("f") )
+        if( vContact != null && isGrounded && Input.GetKeyDown("f") )
         {
             //get point
             Vector3 plantPt = this.transform.position;
@@ -50,6 +56,7 @@ public class PlayerMovement : MonoBehaviour
            
             plantPt.y = vBoundingVol.bounds.max.y;
             vContact.addSeed(plantPt);
+            Debug.Log($"Planted seed: {plantPt}");
         }
 
         return;
@@ -64,15 +71,32 @@ public class PlayerMovement : MonoBehaviour
         if (isGrounded && velo.y < 0)
             velo.y = downVal; 
 
+        
         float x = Input.GetAxis("Horizontal");
         float z = Input.GetAxis("Vertical");
 
         //move along xz
         Vector3 move = transform.right * x + transform.forward * z;
-        controller.Move( move * spd * Time.deltaTime );
+        controller.Move(move * spd * Time.deltaTime);
+
+        // if the player is moving
+        if (move.magnitude > 0)
+        {
+            uiMgr.updateText("");
+            if (vContact)
+                uiMgr.updateText($"On Voronoi Surface: {vContact.name}. Stop to plant");
+        }
 
         if (Input.GetButtonDown("Jump") && isGrounded) // default jump is "Space".. send position to current ice square to leave crack
             velo.y = Mathf.Sqrt(jumpHgt * downVal * grav); // jh= sqrt( height * -2f * g)
+
+        // allow player to plant when still on Voronoi Surface
+        if(isGrounded && move.magnitude == 0 && vContact)
+        {
+            uiMgr.updateText($"Press F to plant seed on {vContact.name}");
+            plantSeed();
+        }
+
 
         //gravity
         velo.y += grav * Time.deltaTime;
@@ -87,22 +111,26 @@ public class PlayerMovement : MonoBehaviour
     private void OnControllerColliderHit(ControllerColliderHit hit)
     {
         GameObject go = hit.gameObject;
-        if(go.CompareTag("Vornoi") && !vContact ) //first enter Vornoi layer
+
+        if (go.CompareTag("Vornoi") && !vContact) //first enter Vornoi layer
         {
             onVornoi = true;
             Debug.Log("GC hit Vornoi object");
             Debug.Log("Collided with" + go.name);
-            vContact = go.GetComponent<VornoiObj>();
-
-            UIManager uiMgr = GameObject.FindObjectOfType<UIManager>();
-
-            if (uiMgr != null)
+            //UIManager uiMgr = GameObject.FindObjectOfType<UIManager>();
+            if (uiMgr != null && !vContact)
                 uiMgr.updateText("Collided with " + go.name);
+
+            vContact = go.GetComponent<VornoiObj>();
 
             return;
         }
 
-        onVornoi = false;
+        else if (!(go.CompareTag("Vornoi")) && vContact)
+        {
+            onVornoi = false;
+            vContact = null;
+        }
 
         //to simulate onCollisonEnter and onCollisionExit, use groundCheck
         return;

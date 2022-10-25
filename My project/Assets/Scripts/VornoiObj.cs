@@ -9,6 +9,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using FortuneAlgo; //for MinHeap, RBT, and algo itself.
+using System;
+using System.Text;
+
 public class VornoiObj : MonoBehaviour
 {
     private List<Vector3> seeds; //list of Vornoi seeds
@@ -25,8 +28,25 @@ public class VornoiObj : MonoBehaviour
         seedColors = new List<Color>();
     }
 
+    public void printSeeds() 
+    {
+        if(seeds == null || seeds.Count == 0)
+        {
+            Debug.Log("No seeds.");
+            return;
+        }
+
+        StringBuilder seedsStr = new StringBuilder();
+        seedsStr.Append("Seeds: ");
+        foreach (Vector3 seed in this.seeds)
+            seedsStr.Append($"{seed} ");
+
+        Debug.Log(seedsStr.ToString());
+
+    }
+
     /*Method used to add Vornoi seeds if they aren't already in the list*/
-    public void addSeed(Vector3 seedPos)
+    public void addSeed(Vector3 seedPos, bool debug = true)
     {
         if (seeds == null)
         {
@@ -35,6 +55,9 @@ public class VornoiObj : MonoBehaviour
         }
         else if (!seeds.Contains(seedPos))
             seeds.Add(seedPos);
+
+        if(debug)
+            printSeeds();
 
         return;
     }
