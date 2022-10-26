@@ -16,11 +16,12 @@ using System.Linq;
 using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
-
+//https://www.boost.org/doc/libs/1_80_0/boost/polygon/voronoi_builder.hpp
 namespace FortuneAlgo
 {
     public class FortuneTracer
     {
+		private const float _toleranceThreshold = 1e-8f;
         private int _siteCount;
         private List<Vector2> _sites;
         private MinHeap<VoronoiEvent> _pq;
@@ -42,7 +43,7 @@ namespace FortuneAlgo
             this._vd = null!;
         }
 
-        /*----------------------------DISTANCE METRICS----------------------------*/
+        /*----------------------------UTIL Methods----------------------------*/
         /*
         * gets Euclidean Distance of 2 sites if it's the desired distance metric 
         */
@@ -51,6 +52,27 @@ namespace FortuneAlgo
             return Vector2.Distance(s1, s2);
         }
 
+		/* checks if a difference is nearly zero*/
+		public bool aroundZero(float diff)
+		{
+			return (-(_toleranceThreshold) <= diff) && (diff <= _toleranceThreshold);
+		}
+		
+		//splits an arc in twain as described in handleSiteEvent. 2 cases, one where focus (pi.x) is < pj.x
+		// and another where pi.x >= pj.x
+		private void insertAndSplit(int sweepCoord, MinHeap<VoronoiEvent> sweep, RedBlackTree<RegionNode> beach)
+		{
+			//TODO
+			return;
+		}
+		
+		//removes an arc as described in handleCircleEvent.
+		private void removeArc(int sweepCoord, MinHeap<VoronoiEvent> sweep, RedBlackTree<RegionNode> beach)
+		{
+			//TODO
+			return;
+		}
+		
         /*----------------------------FORTUNE'S ALGO----------------------------*/
 
         /*
@@ -110,7 +132,7 @@ namespace FortuneAlgo
          * schedules Voronoi Vertex events
          * https://en.wikipedia.org/wiki/Circumscribed_circle#Circumcircle_equations
          */
-        public Vector2 getCircumCenter(Vector2 s1, Vector2 s2, Vector3 s3, int sweepCoord)
+        public Vector2 getCircumCenter(Vector2 s1, Vector2 s2, Vector2 s3)
         {
             float s1Scale = s1.X * s1.X + s1.Y * s1.Y;
             float s2Scale = s2.X * s2.X + s2.Y * s2.Y;
@@ -125,19 +147,93 @@ namespace FortuneAlgo
 
             return new Vector2(Ux, Uy);
         }
+		
+		/*determine if we have a circle event. Get Distance between circumcenter and site
+		then find min y value of circle. If it's below sweepline, we've a circle event to add to the queue*/
+		public bool detectCircleEvent(Vector2 s1, Vector2 s2, Vector2 s3, int sweepCoord, MinHeap<VoronoiEvent> sweep)
+		{
+				Vector2 circCenter = getCircumCenter(s1, s2, s3);
+				float dist1 = computeEuclidDist(s1, circCenter);
+				float dist2 = computeEuclidDist(s2, circCenter);
+				float dist3 = computeEuclidDist(s3, circCenter);
+				
+				float diff12 = dist1 - dist2;
+				float diff13 = dist1 - dist3;
+				float diff23 = dist2 - dist3;
+				
+				if(!(aroundZero(diff12)) || !(aroundZero(diff13)) || !(aroundZero(diff23)))
+					Console.WriteLine($"Computed distances in circleEvent don't check out for {s1} {s2} {s3}");
+				
+				float circBottomY = circCenter.Y - dist1;
+				if (circBottomY >= sweepCoord)
+					return false;
+				
+				//TODO
+				//add circle event to eq..give a reference to the BeachLine Nodes with the sites
+				VoronoiEvent circEvent = new VoronoiEvent(new Vector2(circCenter.X, circBottomY), sweepCoord);
+				sweep.InsertElementInHeap(sweepCoord, circEvent);
+				return true;
+		}
+		
+		
+		/* handle site event. Splits an arc in half and modifies the RBT*/
+		public void handleSiteEvent(int sweepCoord, MinHeap<VoronoiEvent> sweep, RedBlackTree<RegionNode> beach)
+		{
+			//TODO
+			/*
+			1. if T empty, insert arc immediately, else continue.
+			
+			2. Search in T for arc a vertically above new site pi. If a has a ptr to a circle event,
+			we deactivate that event in the event queue Q as it's a false alarm
+			
+			3. replace leaf of T that reps a with a subtree having 3 leaves, the middle of which is pi.
+			
+			The other two internal nodes are edges and have <pjpi> and <pipj> to represent edges formed by splitting a, pj's arc.
+			There are 2 cases here, one where pi's left of alpha and the other right or equal to alpha.
+			
+			4. Create new half edge records in VD DCEL for edge separating V(pi) and V(pj, which is being traced out by <pipj> and <pjpi>
+			
+			5. Check consecutive triples for circle event. 
+			There are 2 new ones that we need to check pjLPred,pjL,pi and pi,pjR,pjRS. If so, add circle event into Q along with a ptr betwn
+			the node in T, which also gets a ptr to the node in Q.
+			*/
+			return;
+		}
+		
+		/* handle valid circle event. Draws a Voronoi Vertex and removes arc from beachline*/
+		public void handleCircleEvent(int sweepCoord, MinHeap<VoronoiEvent> sweep, RedBlackTree<RegionNode> beach)
+		{
+			//TODO
+			/*
+			1. Delete leaf y that reps disappearing arc a from T. Update tuples repping breakpoints/edges at
+				internal nodes. Rebalance as needed... Delete all circle events involving a from Q via using ptrs
+				from predecessor and successor of y in T (circle event w a as middle is being handled in this method)
+			
+			2. Add center of circle causing the event as a vertex record to the DCEL d storing the VD. Make 2 half-edges
+				one corresponding to new breakpt of the beachline. Set ptrs between them appropriately. Attach 3 new records
+				to half-edge records that end at the vertex.
+			
+			3. Check new triples of consecutive arcs that has former left neighbor of a as its middle to see if 2 new breakpoints/edges
+				of the triple converge. If so, insert corresponding circle event into Q, and set ptrs between new circle event and corresponding
+				leaf of T. Do same for triple where former right neighbor is middle arc....
+			*/
+			return;
+		}
 
         // algorithm that executes Fortune's algo for Voronoi diagrams
         // via using sweepline and beachline of parabolas 
         // @returns a built DCEL
         public void fortuneAlgo(MinHeap<VoronoiEvent> sweep, RedBlackTree<RegionNode> beach)
         {
-        //1.Fill the event queue with site events for each input site.
-        //2.While the event queue still has items in it:
-        //    If the next event on the queue is a site event:
-        //        Add the new site to the beachline
-        //    Otherwise it must be an edge-intersection event:
-        //        Remove the squeezed cell from the beachline
-        //3.Cleanup any remaining intermediate state
+			//TODO
+			
+			//1.Fill the event queue with site events for each input site.
+			//2.While the event queue still has items in it:
+			//    If the next event on the queue is a site event:
+			//        Add the new site to the beachline
+			//    Otherwise it must be an edge-intersection event:
+			//        Remove the squeezed cell from the beachline
+			//3.Cleanup any remaining intermediate state
             return;
         }
 
@@ -166,7 +262,8 @@ namespace FortuneAlgo
 
         // initialize beachline with sites only per class notes
         // what is stored in the beachline is the main variation
-        // with Fortune's Algorithm
+        // with Fortune's Algorithm. Helpful for cases where multiple
+		// beginning sites are within a certain y-value of each other.
         public RedBlackTree<RegionNode> initBeachSO()
         {
             return new RedBlackTree<RegionNode>();
