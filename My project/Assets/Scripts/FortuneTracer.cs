@@ -22,11 +22,12 @@ namespace FortuneAlgo
     public class FortuneTracer
     {
 		private const float _toleranceThreshold = 1e-8f;
+		private const float _beachlineBoost = 1e-10f;
         private int _siteCount;
         private List<Vector2> _sites;
         private MinHeap<VoronoiEvent> _pq;
         // we use only site events in the beachline per Dave Mount's Lecture Notes
-        private RedBlackTree<int> _beachLine;
+        private RedBlackTree<float> _beachLine;
         // private _bBox;
         public VoronoiDiagram _vd;
 
@@ -60,14 +61,39 @@ namespace FortuneAlgo
 		
 		//splits an arc in twain as described in handleSiteEvent. 2 cases, one where focus (pi.x) is < pj.x
 		// and another where pi.x >= pj.x
-		private void insertAndSplit(int sweepCoord, MinHeap<VoronoiEvent> sweep, RedBlackTree<RegionNode> beach)
+		private void insertAndSplit(float sweepCoord, MinHeap<VoronoiEvent> sweep, RedBlackTree<RegionNode> beach)
 		{
-			//TODO
+			//TODO...inserting left->right per level seems to minimize rotation...10/29
+			/*if(pj.x > pi.x)
+			{
+				float pipjVal = getBreakPtX(pi,pj);
+				float pjpiVal = pipjVal - _beachlineBoost;
+				pi = internal pipj;
+				pi.val = pipjVal;
+				beach.insert(pjpiVal, RegionNode(pj,pi));
+				beach.insert(pipjVal + _beachlineBoost, new RegionNode(pj));
+				beach.insert(pjpiVal - _beachlineBoost/2f, RegionNode(pj); 
+				beach.insert(pjpiVal + _beachLineBoost/2f, RegionNode(pi));
+				return;
+			}*/
+			
+			/*
+			//pj.x <= pi.x
+			float pjpiVal = getBreakPtX(pi,pj);
+			float pipjVal = pjpiVal + _beachlineBoost;
+			pi = internal pjpi;
+			pi.val = pjpiVal;
+			beach.insert(pjpiVal - _beachlineBoost, new RegionNode(pj));
+			beach.insert(pipjVal, RegionNode(pi,pj));
+			beach.insert(pipjVal - _beachlineBoost/2f, RegionNode(pi); 
+			beach.insert(pipjVal + _beachLineBoost/2f, RegionNode(pj));
+			return;
+			*/
 			return;
 		}
 		
 		//removes an arc as described in handleCircleEvent.
-		private void removeArc(int sweepCoord, MinHeap<VoronoiEvent> sweep, RedBlackTree<RegionNode> beach)
+		private void removeArc(float sweepCoord, MinHeap<VoronoiEvent> sweep, RedBlackTree<RegionNode> beach)
 		{
 			//TODO
 			return;
@@ -85,13 +111,13 @@ namespace FortuneAlgo
          * https://en.wikipedia.org/wiki/Parabola#Definition_as_a_locus_of_points
          * https://jacquesheunis.com/post/fortunes-algorithm/
          */
-        public int yOnParabFromSiteAndX(Vector2 site, int sweepCoord, int x)
+        public float yOnParabFromSiteAndX(Vector2 site, float sweepCoord, float x)
         {
             // given our defn of f and the dir, we can do this given an x coord
             // for d as y = yd and f = (f1,f2), we can find yp (parabola yCoord) st
             // yp = ( (x - f1)^2 / 2(f2 - yd) ) + (f2 + yd)/2
-            int ypTerm1 = (int)Math.Pow(x - site.X, 2) / (int)(2 * (site.Y - sweepCoord));
-            int ypTerm2 = (int)site.Y + sweepCoord / 2;
+            float ypTerm1 = (float) Math.Pow(x - site.X, 2) / (float)(2 * (site.Y - sweepCoord));
+            float ypTerm2 = site.Y + sweepCoord / 2;
             return ypTerm1 + ypTerm2;
         }
 
@@ -102,7 +128,7 @@ namespace FortuneAlgo
         * https://math.stackexchange.com/questions/2700033/explanation-of-method-for-finding-the-intersection-of-two-parabolas
         * https://github.com/jacobdweightman/fortunes-algorithm/blob/master/js/breakpoint.js -- Credited
         */
-        public float getBreakPtX(Vector2 s1, Vector2 s2, int sweepCoord)
+        public float getBreakPtX(Vector2 s1, Vector2 s2, float sweepCoord)
         {
             // given y =  a1x^2 + b1x + c1, y =  a2x^2 + b2^x + c2
             // solve (a1 - a2)x^2 + (b1 - b2)y + (c1 - c2)
@@ -150,7 +176,7 @@ namespace FortuneAlgo
 		
 		/*determine if we have a circle event. Get Distance between circumcenter and site
 		then find min y value of circle. If it's below sweepline, we've a circle event to add to the queue*/
-		public bool detectCircleEvent(Vector2 s1, Vector2 s2, Vector2 s3, int sweepCoord, MinHeap<VoronoiEvent> sweep)
+		public bool detectCircleEvent(Vector2 s1, Vector2 s2, Vector2 s3, float sweepCoord, MinHeap<VoronoiEvent> sweep)
 		{
 				Vector2 circCenter = getCircumCenter(s1, s2, s3);
 				float dist1 = computeEuclidDist(s1, circCenter);
@@ -170,14 +196,16 @@ namespace FortuneAlgo
 				
 				//TODO
 				//add circle event to eq..give a reference to the BeachLine Nodes with the sites
-				VoronoiEvent circEvent = new VoronoiEvent(new Vector2(circCenter.X, circBottomY), sweepCoord);
-				sweep.InsertElementInHeap(sweepCoord, circEvent);
+				VoronoiEvent circEvent = new VoronoiEvent(circCenter, circBottomY);
+				sweep.InsertElementInHeap(circBottomY, circEvent);
+				
+				//set reference to circEvent in respective nodes
 				return true;
 		}
 		
 		
 		/* handle site event. Splits an arc in half and modifies the RBT*/
-		public void handleSiteEvent(int sweepCoord, MinHeap<VoronoiEvent> sweep, RedBlackTree<RegionNode> beach)
+		public void handleSiteEvent(float sweepCoord, MinHeap<VoronoiEvent> sweep, RedBlackTree<RegionNode> beach)
 		{
 			//TODO
 			/*
@@ -201,8 +229,31 @@ namespace FortuneAlgo
 		}
 		
 		/* handle valid circle event. Draws a Voronoi Vertex and removes arc from beachline*/
-		public void handleCircleEvent(int sweepCoord, MinHeap<VoronoiEvent> sweep, RedBlackTree<RegionNode> beach)
+		public void handleCircleEvent(VoronoiEvent circleEvent, MinHeap<VoronoiEvent> sweep, RedBlackTree<RegionNode> beach)
 		{
+            float sweepCoord = circleEvent.weight;
+            RegionNode squeezedArc = circleEvent.vorVertTriple[1];
+            Vector2 squeezedFocus = squeezedArc.regionSite[0];
+
+            // update breakpts with a and delete all circleEvents
+            RBNode<RegionNode> squeezedNode = beach.find(squeezedArc.weight, squeezedArc)!;
+            RBNode<RegionNode> squeezedParent = squeezedNode.parent!;
+            RBNode<RegionNode> squeezedSucc = beach.getSucc(squeezedNode)!;
+            RBNode<RegionNode> squeezedPred = beach.getPred(squeezedNode)!;
+
+
+            // update all breakpts to no longer have squeezed
+            if (squeezedParent != null)
+                squeezedParent.obj.internalToLeaf(squeezedFocus);
+
+            // disable all circle events involving squeezed 
+            squeezedArc.leafVertexEvent.disableVertexEvent();
+            if (squeezedSucc != null)
+                squeezedSucc.obj.leafVertexEvent.disableVertexEvent();
+            if (squeezedPred != null)
+                squeezedPred.obj.leafVertexEvent.disableVertexEvent();
+
+            beach.delete(squeezedArc.weight, squeezedArc);
 			//TODO
 			/*
 			1. Delete leaf y that reps disappearing arc a from T. Update tuples repping breakpoints/edges at
@@ -253,7 +304,7 @@ namespace FortuneAlgo
             MinHeap<VoronoiEvent> pq = new MinHeap<VoronoiEvent>();
             foreach (Vector2 site in orderedSites)
             {
-                ev = new VoronoiEvent(site, ((int)site.Y));
+                ev = new VoronoiEvent(site, site.Y);
                 pq.InsertElementInHeap(site.Y, ev);
             }
 

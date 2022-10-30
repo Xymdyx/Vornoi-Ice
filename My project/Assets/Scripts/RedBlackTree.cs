@@ -6,9 +6,10 @@
 https://www.programiz.com/dsa/red-black-tree tutorial I followed
 https://www.cs.usfca.edu/~galles/visualization/RedBlack.html Animated App for comparison (dups in left here)
 */
-using System;
+
 using System.Collections.Generic;
-using System.Text;
+using System;
+
 namespace FortuneAlgo
 {
     //reps a node in the RedBlackTree
@@ -40,9 +41,11 @@ namespace FortuneAlgo
             this._obj = obj;
         }
 
+
         //hacky code that's going to be refactored because this shouldn't be a thing in an RBT
         //since it could screw up key vals
         //only call when called by RBT itthis in uniformScale 10/6
+		//TODO... for Fortune internal nodes, must use breakpoint when traversing tree
         public void updateVal(float scale)
         {
             //      if(this.obj is sn){
@@ -89,7 +92,7 @@ namespace FortuneAlgo
         /*Red-Black Tree that
         maintains a balanced binary search tree
         by imposing coloring of the levels of a BST*/
-        private RBNode<T> NIL = new RBNode<T>(0.0f, default(T), 0);
+        private RBNode<T> NIL = new RBNode<T>(0.0f, default(T)!, 0);
         public RBNode<T> _root;
         private int _nodeCount;
 
@@ -396,6 +399,7 @@ namespace FortuneAlgo
                 return -1;
             }
             //travel to a leafNode
+			//TODO Compare against breakpoint calc rather than key
             while (currNode != this.NIL)
             {
                 parent = currNode;
@@ -554,6 +558,19 @@ namespace FortuneAlgo
             }
             return parent;
         }
+
+
+        //convenience method for getting sibling if one exists
+        public RBNode<T> getSibling(RBNode<T> start = null!)
+        {
+            RBNode<T> el = start;
+
+            if (start == null)
+                return null!;
+
+            return (el.parent.left == el) ? el.parent.left : el.parent.right;
+        }
+
 
         /*swap a node with its immediate successor*/
         public void swapAdjacent(RBNode<T> n1)
