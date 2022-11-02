@@ -109,29 +109,17 @@ namespace FortuneAlgo
 
         /*Private helper methods*/
 
-        /*if the root is NIL, then we're empty*/
-        public bool _isEmpty()
-        {
-            return this.root == this.NIL;
-        }
-
-        //all leaves are black and have NIL as a child node
-        public bool _isNIL(RBNode<T> node)
+        //check if a given node is NIL
+        private bool _isNIL(RBNode<T> node)
         {
             return node == this.NIL;
-        }
-
-        ////all leaves are black and have NIL as a child node
-        public bool _isLeaf(RBNode<T> node)
-        {
-            return (node.right == null) && (node.left == null);
         }
 
         /*balancing mechanism for RBT
         a childTree y moves its left child to its
         parent x, and then becomes x's parent
         el is x here*/
-        public void _leftRot(RBNode<T> el)
+        private void _leftRot(RBNode<T> el)
         {
             RBNode<T> foster = el.right;
             el.right = foster.left;
@@ -161,7 +149,7 @@ namespace FortuneAlgo
         a childTree y moves its right child to its
         parent x, and then becomes x's parent
         el is x here*/
-        public void _rightRot(RBNode<T> el)
+        private void _rightRot(RBNode<T> el)
         {
             RBNode<T> foster = el.left;
             el.left = foster.right;
@@ -187,7 +175,7 @@ namespace FortuneAlgo
         }
 
         /*Helper for ensuring tree is RBT after insertion*/
-        public void _insRepair(RBNode<T> el)
+        private void _insRepair(RBNode<T> el)
         {
             RBNode<T> p = el.parent;
             RBNode<T> gp = p.parent;
@@ -248,7 +236,7 @@ namespace FortuneAlgo
         }
 
         /*Helper for the delete method. Causes n2 to replace or parent n1*/
-        public void _transplant(RBNode<T> n1, RBNode<T> n2)
+        private void _transplant(RBNode<T> n1, RBNode<T> n2)
         {
             if (n1.parent == null)
                 this.root = n2;
@@ -265,7 +253,7 @@ namespace FortuneAlgo
        after deleting a node from the RBT
         x (the parent) is occupying the deletedNode's orig spot
         the parent has an extra black*/
-        public void _delRepair(RBNode<T> x)
+        private void _delRepair(RBNode<T> x)
         {
             RBNode<T> parent = null!;
             RBNode<T> sib = null!;
@@ -342,13 +330,25 @@ namespace FortuneAlgo
         }
 
         /*helper to ensure two nodes of the same datatype*/
-        public bool _checkKeyTypes(RBNode<T> n1, RBNode<T> n2)
+        private bool _checkKeyTypes(RBNode<T> n1, RBNode<T> n2)
         {
             return n1.key.GetType() == n2.key.GetType();
         }
 
         /*Public methods*/
-
+		
+		/*if the root is NIL, then we're empty*/
+        public bool isEmpty()
+        {
+            return this.root == this.NIL;
+        }
+		
+		//all visible leaves are black and have NIL as child nodea
+        public bool isLeaf(RBNode<T> node)
+        {
+            return ( _isNIL(node.right) ) && ( _isNIL(node.left) );
+        }
+		
         //get the root of the tree
         public RBNode<T> getRoot() { return this.root; }
 
@@ -393,7 +393,7 @@ namespace FortuneAlgo
             RBNode<T> currNode = this.root;
             float elKey = el.key;
 
-            if (!(this._isEmpty()) && !(this._checkKeyTypes(currNode, el)))
+            if (!(this.isEmpty()) && !(this._checkKeyTypes(currNode, el)))
             {
                 Console.WriteLine("Mismatched keys used in RBT nodes, aborting operation");
                 return -1;

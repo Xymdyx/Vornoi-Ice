@@ -59,36 +59,94 @@ namespace FortuneAlgo
 			return (-(_toleranceThreshold) <= diff) && (diff <= _toleranceThreshold);
 		}
 		
-		//splits an arc in twain as described in handleSiteEvent. 2 cases, one where focus (pi.x) is < pj.x
-		// and another where pi.x >= pj.x
-		private void insertAndSplit(float sweepCoord, MinHeap<VoronoiEvent> sweep, RedBlackTree<RegionNode> beach)
+		/*
+		* private helper used by insertAndSplit 
+		* traverse the beachline represented by the RedBlackTree
+		* using getBreakPt at internal nodes....
+		* go left if new site pi < breakPtX at an internal node
+		* stop when we reach a leaf node.
+		*/
+		private RBNode<RegionNode> findArcAboveSite(Vector2 piSite, RedBlackTree<RegionNode> beach)
 		{
-			//TODO...inserting left->right per level seems to minimize rotation...10/29
-			/*if(pj.x > pi.x)
-			{
-				float pipjVal = getBreakPtX(pi,pj);
-				float pjpiVal = pipjVal - _beachlineBoost;
-				pi = internal pipj;
-				pi.val = pipjVal;
-				beach.insert(pjpiVal, RegionNode(pj,pi));
-				beach.insert(pipjVal + _beachlineBoost, new RegionNode(pj));
-				beach.insert(pjpiVal - _beachlineBoost/2f, RegionNode(pj); 
-				beach.insert(pjpiVal + _beachLineBoost/2f, RegionNode(pi));
-				return;
-			}*/
+			RBNode<RegionNode> parent = null!;
+            RBNode<RegionNode> arcNode = beach.getRoot();
+
+			float bpX = 0.0f;
+			List<Vector2> bpSites = null!;
 			
-			/*
-			//pj.x <= pi.x
-			float pjpiVal = getBreakPtX(pi,pj);
-			float pipjVal = pjpiVal + _beachlineBoost;
-			pi = internal pjpi;
-			pi.val = pjpiVal;
-			beach.insert(pjpiVal - _beachlineBoost, new RegionNode(pj));
-			beach.insert(pipjVal, RegionNode(pi,pj));
-			beach.insert(pipjVal - _beachlineBoost/2f, RegionNode(pi); 
-			beach.insert(pipjVal + _beachLineBoost/2f, RegionNode(pj));
-			return;
-			*/
+            //travel to a leafNode representing a lone arc
+            while (!beach.isLeaf(arcNode))
+            {
+                parent = arcNode;
+				bpSites = arcNode.obj.regionSites;
+				if( bpSites.Count != 2)
+					Console.WriteLine($"Supposed internal arc has {bpSites.Count} instead of 2 arcs.");
+				
+				bpX = getBreakPtX(bpSites[0], bpSites[1], piSite.Y);
+                if (piSite.X < bpX)
+                    arcNode = arcNode.left;
+                else
+                    arcNode = arcNode.right;
+            }
+			
+			return arcNode;
+		}
+		
+		
+		/*
+		* splits an arc in twain as described in handleSiteEvent. 2 cases, one where focus (pi.x) is < pj.x
+		* and another where pi.x >= pj.x
+		* only called when there is at least one arc in the beachline since we get at most 2n-1 arcs...
+		*/
+		private void insertAndSplit(Vector2 piSite, MinHeap<VoronoiEvent> sweep, RedBlackTree<RegionNode> beach)
+		{
+			RBNode<RegionNode> pjNode = findArcAboveSite(piSite, beach);
+			RegionNode pjArc = pjNode.obj;
+			Vector2 pjSite = pjArc.regionSites[0];
+			Vector2 breakPt = default;
+			List<Vector2> regionDuo = null!;
+			float pipjVal = 0.0f;
+			float pjpiVal = 0.0f;
+			float piVal = 0.0f;
+			// TODO...inserting left->right per level seems to minimize rotation...10/29
+			// however, the longevity of this insertion pattern is dubious.. Try average as values for inner leaf nodes.
+			if(pjSite.X > piSite.X)
+			{
+				pipjVal = getBreakPtX(piSite, pjSite, piSite.Y);
+				pjpiVal = pipjVal - _beachlineBoost;
+				piVal = (pipjVal + pjpiVal) / 2f;
+
+				//pj = internal pipj;
+				breakPt = new Vector2(pipjVal, piSite.Y);
+				regionDuo = new List<Vector2> { piSite, pjSite };
+				pjArc.leafToInternal(regionDuo, breakPt);
+				
+				//pj.val = pipjVal and insertion
+				pjNode.key = pipjVal;
+				beach.insert(pjpiVal, new RegionNode(pjSite,piSite, pjpiVal));
+				beach.insert(pipjVal + _beachlineBoost, new RegionNode(pjSite, pipjVal + _beachlineBoost));
+				beach.insert(piVal, new RegionNode(pjSite, piVal)); 
+				beach.insert(pjpiVal + _beachlineBoost/2f, new RegionNode(piSite, pjpiVal + _beachlineBoost / 2f));
+				return;
+			}
+			
+			// pj.x <= pi.x
+			pjpiVal = getBreakPtX(pjSite, piSite, piSite.Y);
+			pipjVal = pjpiVal + _beachlineBoost;
+			piVal = (pipjVal + pjpiVal) / 2f;
+			
+			// pj = internal pjpi;
+			breakPt = new Vector2(pjpiVal, piSite.Y);
+			regionDuo = new List<Vector2> {pjSite, piSite};
+			pjArc.leafToInternal(regionDuo, breakPt);
+			
+			// pi.val = pjpiVal and insertion
+			pjNode.key = pjpiVal;
+			beach.insert(pjpiVal - _beachlineBoost, new RegionNode(pjSite, pjpiVal - _beachlineBoost));
+			beach.insert(pipjVal, new RegionNode(piSite, pjSite, pipjVal));
+			beach.insert(piVal, new RegionNode(piSite, piVal)); 
+			beach.insert(pipjVal + _beachlineBoost/2f, new RegionNode(pjSite, pipjVal + _beachlineBoost / 2f));
+
 			return;
 		}
 		
@@ -160,6 +218,9 @@ namespace FortuneAlgo
          */
         public Vector2 getCircumCenter(Vector2 s1, Vector2 s2, Vector2 s3)
         {
+			if(s1 == default || s2 == default || s3 == default)
+				return default!;
+			
             float s1Scale = s1.X * s1.X + s1.Y * s1.Y;
             float s2Scale = s2.X * s2.X + s2.Y * s2.Y;
             float s3Scale = s3.X * s3.X + s3.Y * s3.Y;
@@ -174,11 +235,22 @@ namespace FortuneAlgo
             return new Vector2(Ux, Uy);
         }
 		
+		/*
+		* helper for detectCircleEvent
+		* check if two breakpoints of a consecutive triple converge....
+		* this means the bisectors that define them move in opposite directions and never intersect at the circumcenter
+		*/
+		private bool doesTripleConverge(Vector2 circCenter)
+		{
+			return false;
+		}
+		
 		/*determine if we have a circle event. Get Distance between circumcenter and site
 		then find min y value of circle. If it's below sweepline, we've a circle event to add to the queue*/
 		public bool detectCircleEvent(Vector2 s1, Vector2 s2, Vector2 s3, float sweepCoord, MinHeap<VoronoiEvent> sweep)
 		{
 				Vector2 circCenter = getCircumCenter(s1, s2, s3);
+				
 				float dist1 = computeEuclidDist(s1, circCenter);
 				float dist2 = computeEuclidDist(s2, circCenter);
 				float dist3 = computeEuclidDist(s3, circCenter);
@@ -189,11 +261,13 @@ namespace FortuneAlgo
 				
 				if(!(aroundZero(diff12)) || !(aroundZero(diff13)) || !(aroundZero(diff23)))
 					Console.WriteLine($"Computed distances in circleEvent don't check out for {s1} {s2} {s3}");
-				
+								
 				float circBottomY = circCenter.Y - dist1;
 				if (circBottomY >= sweepCoord)
 					return false;
 				
+				if ( !doesTripleConverge(circCenter))
+					return false;
 				//TODO
 				//add circle event to eq..give a reference to the BeachLine Nodes with the sites
 				VoronoiEvent circEvent = new VoronoiEvent(circCenter, circBottomY);
@@ -233,7 +307,7 @@ namespace FortuneAlgo
 		{
             float sweepCoord = circleEvent.weight;
             RegionNode squeezedArc = circleEvent.vorVertTriple[1];
-            Vector2 squeezedFocus = squeezedArc.regionSite[0];
+            Vector2 squeezedFocus = squeezedArc.regionSites[0];
 
             // update breakpts with a and delete all circleEvents
             RBNode<RegionNode> squeezedNode = beach.find(squeezedArc.weight, squeezedArc)!;
@@ -288,7 +362,8 @@ namespace FortuneAlgo
             return;
         }
 
-        //initialize SweepLine
+        // initialize SweepLine
+		// TODO may need to switch to maximal Y or switch beachline to be ordered by X...
         public MinHeap<VoronoiEvent> initSweep()
         {
             List<Vector2> orderedSites = new List<Vector2>(this._sites);

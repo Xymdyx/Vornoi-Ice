@@ -28,7 +28,7 @@ namespace CSHarpSandBox
 
 
         /* PROPERTIES */
-        public List<Vector2> regionSite { get => this._regionSites; }
+        public List<Vector2> regionSites { get => this._regionSites; }
         public float weight { get => this._weight; }
 
         //only for triples
@@ -38,7 +38,7 @@ namespace CSHarpSandBox
         public int internalDcelEdge { get => this._dcelEdge; }
 
         //constructor for leaf node..Usable in RBT
-        RegionNode(Vector2 regionSite, float weight)
+        public RegionNode(Vector2 regionSite, float weight)
         {
             _regionSites = new List<Vector2>{regionSite};
             this._weight = weight;
@@ -48,15 +48,10 @@ namespace CSHarpSandBox
 
 
         //constructor for internalNodes used in insertAndSplit
-        RegionNode(List<Vector2> regionSites, float weight)
+        public RegionNode(Vector2 leftSite, Vector2 rightSite, float weight)
         {
-            if (regionSites.Count != 2)
-            {
-                Console.WriteLine("Breakpoint without 2 sites, ending program");
-                Environment.Exit(-1);
-            }
 
-            _regionSites = regionSites;
+            _regionSites = new List<Vector2> {leftSite, rightSite};
             this._weight = weight;
             this._makerEvent = null!;
             this._dcelEdge = 0;
@@ -73,7 +68,7 @@ namespace CSHarpSandBox
 		 * @param: regionDuo -- the new parabola pair that this edge is being traced by
 		 * @param: vdDcel -- the master DCEL that we are drawing a dangling edge of
 		 */
-		public void leafToInternal(List<Vector2> regionDuo, Vector2 breakPt, List<LineSegment> vdSegments)
+		public void leafToInternal(List<Vector2> regionDuo, Vector2 breakPt, List<LineSegment> vdSegments = null)
 		{
 			// replace sites
 			this._regionSites = regionDuo;
