@@ -28,6 +28,12 @@ namespace FortuneAlgo
             PointB = INFINITY;
         }
 
+        //create the twin of a given segment.
+        public LineSegment makeOwnTwin() 
+        {
+            return new LineSegment(this.PointB, this.PointA);
+        }
+
         public Vector2 PointA{ get => this.PointA; set => PointA = value; }
 
         public Vector2 PointB{ get => this.PointB; set => PointB = value; }

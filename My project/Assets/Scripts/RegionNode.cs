@@ -32,7 +32,7 @@ namespace CSHarpSandBox
         public float weight { get => this._weight; }
 
         //only for triples
-        public VoronoiEvent leafVertexEvent { get => this._makerEvent; set => this._makerEvent = value; }
+        public VoronoiEvent leafCircleEvent { get => this._makerEvent; set => this._makerEvent = value; }
 
         //only for internal nodes
         public int internalDcelEdge { get => this._dcelEdge; }
@@ -72,20 +72,42 @@ namespace CSHarpSandBox
 		{
 			// replace sites
 			this._regionSites = regionDuo;
-            // make dangling dcelEdge
+            // make dangling dcelEdge TODO
             LineSegment dangling = new LineSegment(breakPt);
             //Vertex<LineSegment, Vector2> vertex = new Vertex<LineSegment, Vector2>(breakPt);
             //HalfEdge<LineSegment, Vector2> breakPtHE = new HalfEdge<LineSegment, Vector2>(dangling, vertex);
             vdSegments.Add(dangling);
 		}
 		
-		//change parent to leaf
+		// change parent to leaf
 		public void internalToLeaf(Vector2 deadArc)
 		{
             // remove deadArc
             this._regionSites.Remove(deadArc);
             this._makerEvent = null!;
-			// clip dcelEdge and remove reference
+			// clip dcelEdge and remove reference TODO
 		}
+
+        /* 
+         * given another internalNode, return this internalNode's unqiue site(s)
+         * return null if they aren't both internal
+         */
+        public List<Vector2> getInternalUniqueSites(RegionNode other) 
+        {
+            if (!other.isInternalNode() || !this.isInternalNode())
+                return null!;
+            
+            List<Vector2> otherSites = other.regionSites;
+            List<Vector2> uniqueSites = new List<Vector2>(2);
+
+            if (!otherSites.Contains(regionSites[0]))
+                uniqueSites.Add(regionSites[0]);
+
+            if (!otherSites.Contains(regionSites[1]))
+                uniqueSites.Add(regionSites[1]);
+
+            return uniqueSites;
+        }
+
     }
 }
