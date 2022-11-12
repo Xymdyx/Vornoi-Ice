@@ -24,18 +24,18 @@ namespace CSHarpSandBox
 
         // Has cross-link with VoronoiVertex event.
         private VoronoiEvent _makerEvent;
-		private int _dcelEdge;
+		private readonly HalfEdge<LineSegment, Vector2> _dcelEdge;
 
 
         /* PROPERTIES */
         public List<Vector2> regionSites { get => this._regionSites; }
         public float weight { get => this._weight; }
+        internal HalfEdge<LineSegment, Vector2> dcelEdge { get => this._dcelEdge; }
 
         //only for triples
         public VoronoiEvent leafCircleEvent { get => this._makerEvent; set => this._makerEvent = value; }
 
         //only for internal nodes
-        public int internalDcelEdge { get => this._dcelEdge; }
 
         //constructor for leaf node..Usable in RBT
         public RegionNode(Vector2 regionSite, float weight)
@@ -43,7 +43,7 @@ namespace CSHarpSandBox
             _regionSites = new List<Vector2>{regionSite};
             this._weight = weight;
             this._makerEvent = null!;
-			this._dcelEdge = -1;
+			this._dcelEdge = null!;
         }
 
 
@@ -54,7 +54,7 @@ namespace CSHarpSandBox
             _regionSites = new List<Vector2> {leftSite, rightSite};
             this._weight = weight;
             this._makerEvent = null!;
-            this._dcelEdge = 0;
+            this._dcelEdge = null!;
         }
 		
 		//convenience method for telling if a node is a parent.
@@ -79,14 +79,36 @@ namespace CSHarpSandBox
             vdSegments.Add(dangling);
 		}
 		
+        
 		// change parent to leaf
 		public void internalToLeaf(Vector2 deadArc)
 		{
             // remove deadArc
             this._regionSites.Remove(deadArc);
             this._makerEvent = null!;
-			// clip dcelEdge and remove reference TODO
 		}
+
+        // update internal and keep it internal
+        public int updateInternal(Vector2 deadArc, Vector2 newArc, Vector2 circleCenter) 
+        {
+            if (!isInternalNode())
+            {
+                Console.WriteLine("Trying to update a non-internal node");
+                return -1;
+            }
+
+            int deadIdx = this._regionSites.IndexOf(deadArc);
+            if (deadIdx == -1)
+            {
+                Console.WriteLine("Dead arc not found in internal node");
+                return -1;
+            }
+
+            _regionSites[deadIdx] = newArc;
+            this._dcelEdge.OriginalSegment.fillOtherEndPoint(circleCenter);
+
+            return 0;
+        }
 
         /* 
          * given another internalNode, return this internalNode's unqiue site(s)
@@ -108,6 +130,5 @@ namespace CSHarpSandBox
 
             return uniqueSites;
         }
-
     }
 }

@@ -31,6 +31,12 @@ using System.Text;
  */
 //SWEEP-AXIS-MOVE-DEPENDENT//
 
+
+/*
+ * CONCERNS
+ * 11/4.... So the Ethereality DCEL seems great for constructing one givens segments but less so for building
+ * one from scratch consider this simpler one: https://searchcode.com/codesearch/view/49254163/
+ */
 namespace FortuneAlgo
 {
     public class FortuneTracer
@@ -229,7 +235,7 @@ namespace FortuneAlgo
 		* Get Distance between circumcenter and site then find min y value of circle.
 		* If it's below sweepline and the left and right breakpts converge, we've a circle event to add to the queue
         */
-        public bool detectCircleEvent(RBNode<RegionNode> left, RBNode<RegionNode> mid, RBNode<RegionNode> right, float sweepCoord, MinHeap<VoronoiEvent> sweep)
+        public bool detectCircleEvent(RBNode<RegionNode> left, RBNode<RegionNode> mid, RBNode<RegionNode> right, float sweepCoord, MinHeap<VoronoiEvent> eventQueue)
         {
             RegionNode leftArc = left.obj;
             RegionNode midArc = mid.obj;
@@ -273,7 +279,7 @@ namespace FortuneAlgo
             //TODO
             //add circle event to EventQueue... give a reference to the squeezedArcNode
             VoronoiEvent circEvent = new VoronoiEvent(circCenter, circBottomY, mid, circCenter);
-            sweep.InsertElementInHeap(circBottomY, circEvent);
+            eventQueue.InsertElementInHeap(circBottomY, circEvent);
 
             // set reference to circEvent in the middleNode that will get squeezed out
             mid.obj.leafCircleEvent = circEvent;
@@ -321,7 +327,7 @@ namespace FortuneAlgo
 		* and another where pi.x >= pj.x
 		* only called when there is at least one arc in the beachline since we get at most 2n-1 arcs...
 		*/
-        private void insertAndSplit(Vector2 piSite, MinHeap<VoronoiEvent> sweep, RedBlackTree<RegionNode> beach)
+        private void insertAndSplit(Vector2 piSite, MinHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach)
         {
             RBNode<RegionNode> pjNode = findArcAboveSite(piSite, beach);
             RegionNode pjArc = pjNode.obj;
@@ -333,6 +339,8 @@ namespace FortuneAlgo
             float piVal = 0.0f;
 
             //we can use this divisor to allow us to exploit an infinite range.. 11/3 TODO
+            // ALSO ADD THE DCEL EDGES ... 11/3 TODO
+
             float levelDivisor = 2f;
 
             // TODO...inserting left->right per level seems to minimize rotation...10/29
@@ -382,7 +390,7 @@ namespace FortuneAlgo
 
         /*------------------------------- CIRCLE EVENT METHODS -------------------------------*/
         //removes an arc as described in handleCircleEvent.
-        private void removeArc(float sweepCoord, MinHeap<VoronoiEvent> sweep, RedBlackTree<RegionNode> beach)
+        private void removeArc(float sweepCoord, MinHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach)
 		{
 			//TODO
 			return;
@@ -394,7 +402,7 @@ namespace FortuneAlgo
         /* 
 		 * handle site event. Splits an arc in half and modifies the RBT
 		 */
-        public void handleSiteEvent(float sweepCoord, MinHeap<VoronoiEvent> sweep, RedBlackTree<RegionNode> beach)
+        public void handleSiteEvent(float sweepCoord, MinHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach)
 		{
 			//TODO
 			/*
@@ -421,9 +429,9 @@ namespace FortuneAlgo
 		 * handle valid circle event. 
 		 * Draws a Voronoi Vertex and removes arc from beachline
 		 */
-		public void handleCircleEvent(VoronoiEvent circleEvent, MinHeap<VoronoiEvent> sweep, RedBlackTree<RegionNode> beach, Dcel<LineSegment,Vector2> vd)
+		public void handleCircleEvent(VoronoiEvent circleEvent, MinHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach, Dcel<LineSegment,Vector2> vd)
 		{
-            if (vd == null || sweep == null || circleEvent == null || beach == null)
+            if ((vd == null) || (eventQueue == null) || (circleEvent == null) || (beach == null))
             {
                 Console.WriteLine("Something's null in handleCircleEvent, stopping now");
                 return;
@@ -434,36 +442,60 @@ namespace FortuneAlgo
             RegionNode squeezedArc = squeezedNode.obj;
             Vector2 squeezedFocus = squeezedArc.regionSites[0];
 
-            // update breakpts with a and delete all circleEvents
+            // grab parent breakpt and grandparent breakpt
             RBNode<RegionNode> squeezedParent = squeezedNode.parent!;
 			RBNode<RegionNode> squeezedGrandParent = null!;
 			
 			if(squeezedParent != null)
 				squeezedGrandParent = squeezedParent.parent;
 			
+            // initialize neighboring arcs
             RBNode<RegionNode> squeezedSucc = beach.getSucc(squeezedNode)!;
             RBNode<RegionNode> squeezedPred = beach.getPred(squeezedNode)!;
+            RBNode<RegionNode> squeezedSuccSucc = null!;
+            RBNode<RegionNode> squeezedPredPred = null!;
 
+            Vector2 circleCenter = circleEvent.circleEventCenter;
+            Vector2 updatedSite = default;
 
             // update all breakpts to no longer have squeezed
+            // the triple of consecutive sites
+            // pi,pj,pk on the sweep-line status is replaced with pi,pk
+            // TODO 11/4. Clip DCEL edges
             if (squeezedParent != null)
-                squeezedParent.obj.internalToLeaf(squeezedFocus);
-			if (squeezedGrandParent != null)
-                squeezedGrandParent.obj.internalToLeaf(squeezedFocus);
+            {
+                updatedSite = (squeezedNode == squeezedParent.right) ? squeezedPred.obj.regionSites[0] : squeezedSucc.obj.regionSites[0];
+                squeezedParent.obj.updateInternal(squeezedFocus, updatedSite, circleCenter);
+            }
+            if (squeezedGrandParent != null)
+            {
+                squeezedGrandParent.obj.updateInternal(squeezedFocus, updatedSite, circleCenter);
+            }
 
-            // disable all circle events involving squeezed 
+            // disable all circle events involving squeezed
+            // and get nodes for future circle events
             squeezedArc.leafCircleEvent.disableCircleEvent();
             if (squeezedSucc != null)
+            {
                 squeezedSucc.obj.leafCircleEvent.disableCircleEvent();
+                squeezedSuccSucc = beach.getSucc(squeezedSucc)!;
+            }
             if (squeezedPred != null)
+            {
                 squeezedPred.obj.leafCircleEvent.disableCircleEvent();
+                squeezedPredPred = beach.getPred(squeezedPred)!;
+            }
 
+            // update the higher-up internal node with pj to represent pipk...
+            // this should be an adjacent arc's parent != removed arc's parent, aka a grandparent
             beach.delete(squeezedArc.weight, squeezedArc);
+
+            if(squeezedParent != null)
+                beach.delete(squeezedParent.key, squeezedParent.obj);
 
 
             // add circle center to vertices and bind 2 halfEdges to it. IN PROGRESS 11/3
-            Vector2 circleCenter = circleEvent.circleEventCenter;
-            LineSegment upDangling = new LineSegment(circleCenter);
+            /*LineSegment upDangling = new LineSegment(circleCenter);
             LineSegment downDangling = upDangling.makeOwnTwin();
 
             Vertex<LineSegment, Vector2> eventCenter = new Vertex<LineSegment, Vector2>(circleCenter);
@@ -473,7 +505,18 @@ namespace FortuneAlgo
             eventCenter.HalfEdges.Add(newHEDown);
             eventCenter.HalfEdges.Add(newHEUp);
 
-            vd.Vertices.Append(eventCenter);
+            vd.Vertices.Append(eventCenter);*/
+
+            // add 3 new records to half-edge records that end at the circle center...i.e. the end vertex for one half-edge
+            // the prev, and the next...? 11/4
+
+
+            // detect future circle events involving new neighbors
+            if((squeezedPred != null) && (squeezedSucc != null) &&  (squeezedSuccSucc != null))
+                detectCircleEvent(squeezedPred, squeezedSucc, squeezedSuccSucc, sweepCoord, eventQueue);
+            if ((squeezedPredPred != null) && (squeezedPred != null) &&  (squeezedSucc != null))
+                detectCircleEvent(squeezedPredPred, squeezedPred, squeezedSucc, sweepCoord, eventQueue);
+
             /*
              1. Delete leaf y that reps disappearing arc a from T. Update tuples repping breakpoints/edges at
 			 Internal nodes. Rebalance as needed... Delete all circle events involving a from Q via using ptrs
@@ -498,10 +541,10 @@ namespace FortuneAlgo
         // algorithm that executes Fortune's algo for Voronoi diagrams
         // via using sweepline and beachline of parabolas 
         // @returns a built DCEL
-        public void fortuneAlgo(MinHeap<VoronoiEvent> sweep, RedBlackTree<RegionNode> beach)
+        public void fortuneAlgo(MinHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach)
         {
-			//TODO
-			
+            //TODO
+            //Dcel<LineSegment, Vector2> voronoiDCEL = new Dcel<LineSegment, Vector2>();
 			//1.Fill the event queue with site events for each input site.
 			//2.While the event queue still has items in it:
 			//    If the next event on the queue is a site event:
@@ -512,9 +555,9 @@ namespace FortuneAlgo
             return;
         }
 
-        // initialize SweepLine
+        // initialize eventQueueLine
 		// TODO may need to switch to maximal Y or switch beachline to be ordered by X...
-        public MinHeap<VoronoiEvent> initSweep()
+        public MinHeap<VoronoiEvent> initEventQueue()
         {
             List<Vector2> orderedSites = new List<Vector2>(this._sites);
             List<VoronoiEvent> events = new List<VoronoiEvent>();
@@ -542,15 +585,17 @@ namespace FortuneAlgo
 		// beginning sites are within a certain y-value of each other.
         public RedBlackTree<RegionNode> initBeachSO()
         {
+            // handle edge cases where several starting
+            // points are within a certain range TODO 11/12
             return new RedBlackTree<RegionNode>();
         }
 
         //main algorithm for this class
         public void fortuneMain()
         {
-            MinHeap<VoronoiEvent> sweep = initSweep();
+            MinHeap<VoronoiEvent> eventQueue = initEventQueue();
             RedBlackTree<RegionNode> beach = initBeachSO();
-            fortuneAlgo(sweep, beach);
+            fortuneAlgo(eventQueue, beach);
             return;
         }
     }

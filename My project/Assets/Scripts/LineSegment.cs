@@ -34,6 +34,17 @@ namespace FortuneAlgo
             return new LineSegment(this.PointB, this.PointA);
         }
 
+        //make this line segment finite
+        public void fillOtherEndPoint(Vector2 end)
+        {
+            if (this.PointA == INFINITY)
+                this.PointA = end;
+            else if (this.PointB == INFINITY)
+                this.PointB = end;
+
+            return;
+        }
+
         public Vector2 PointA{ get => this.PointA; set => PointA = value; }
 
         public Vector2 PointB{ get => this.PointB; set => PointB = value; }

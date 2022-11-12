@@ -158,7 +158,7 @@ namespace FortuneAlgo
             return;
         }
 
-        //Extract Head of Heap... TODO make genral delete 10/06
+        //Extract Head of Heap
         public double DeleteElementInHeap(double item, T obj = default!)
         {
             if (sizeOfHeap == 0)
@@ -193,7 +193,6 @@ namespace FortuneAlgo
             return delVal;
         }
 
-        //Extract Head of Heap... TODO make genral delete 10/06
         public double extractHeadOfHeap()
         {
             return DeleteElementInHeap(this.arr[0]);

@@ -574,7 +574,7 @@ namespace FortuneAlgo
 
         /*swap a node with its immediate successor*/
         public void swapAdjacent(RBNode<T> n1)
-        { //UNSURE TODO 10/6
+        { 
             RBNode<T> succ = this.getSucc(n1);
             this.delete(n1.key, n1.obj);
             this.delete(succ.key, succ.obj);
