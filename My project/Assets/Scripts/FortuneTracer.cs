@@ -10,7 +10,6 @@ https://jacquesheunis.com/post/fortunes-algorithm/
 https://stackoverflow.com/questions/9612065/breakpoint-convergence-in-fortunes-algorithm
 */
 using CSHarpSandBox;
-using Ethereality.DoublyConnectedEdgeList;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -85,7 +84,7 @@ namespace FortuneAlgo
 		}
 
         /* set two half edges as each other's twins */
-        private void setHETwins(HalfEdge<LineSegment, Vector2> he1, HalfEdge<LineSegment, Vector2> he2)
+        private void setHETwins(HalfEdge he1, HalfEdge he2)
         {
             he1.Twin = he2;
             he2.Twin = he1;
@@ -327,13 +326,16 @@ namespace FortuneAlgo
 		* and another where pi.x >= pj.x
 		* only called when there is at least one arc in the beachline since we get at most 2n-1 arcs...
 		*/
-        private void insertAndSplit(Vector2 piSite, MinHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach)
+        private void insertAndSplit(Vector2 piSite, MinHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach, DCEL voronoiDCEL)
         {
             RBNode<RegionNode> pjNode = findArcAboveSite(piSite, beach);
             RegionNode pjArc = pjNode.obj;
             Vector2 pjSite = pjArc.regionSites[0];
             Vector2 breakPt = default;
             List<Vector2> regionDuo = null!;
+            HalfEdge pipjHE = new();
+            HalfEdge pjpiHE = new();
+
             float pipjVal = 0.0f;
             float pjpiVal = 0.0f;
             float piVal = 0.0f;
@@ -355,12 +357,15 @@ namespace FortuneAlgo
 
                 //pj = internal pipj;
                 breakPt = new Vector2(pipjVal, piSite.Y);
+                pipjHE.Origin = new Vertex(pipjHE, breakPt);
+                pjpiHE.Origin = voronoiDCEL.InfiniteVertex;
+                setHETwins(pipjHE, pjpiHE);
                 regionDuo = new List<Vector2> { piSite, pjSite };
-                pjArc.leafToInternal(regionDuo, breakPt);
+                pjArc.leafToInternal(regionDuo, pipjHE);
 
                 //pj.val = pipjVal and insertion
                 pjNode.key = pipjVal;
-                beach.insert(pjpiVal, new RegionNode(pjSite, piSite, pjpiVal));
+                beach.insert(pjpiVal, new RegionNode(pjSite, piSite, pjpiHE, pjpiVal));
                 beach.insert(pipjVal + _beachlineBoost, new RegionNode(pjSite, pipjVal + _beachlineBoost));
                 beach.insert(piVal, new RegionNode(pjSite, piVal));
                 beach.insert(pjpiVal + _beachlineBoost / 2f, new RegionNode(piSite, pjpiVal + _beachlineBoost / 2f));
@@ -374,13 +379,16 @@ namespace FortuneAlgo
 
             // pj = internal pjpi;
             breakPt = new Vector2(pjpiVal, piSite.Y);
+            pjpiHE.Origin = new Vertex(pjpiHE, breakPt);
+            pipjHE.Origin = voronoiDCEL.InfiniteVertex;
+            setHETwins(pjpiHE, pipjHE);
             regionDuo = new List<Vector2> { pjSite, piSite };
-            pjArc.leafToInternal(regionDuo, breakPt);
+            pjArc.leafToInternal(regionDuo, pjpiHE);
 
             // pi.val = pjpiVal and insertion
             pjNode.key = pjpiVal;
             beach.insert(pjpiVal - _beachlineBoost, new RegionNode(pjSite, pjpiVal - _beachlineBoost));
-            beach.insert(pipjVal, new RegionNode(piSite, pjSite, pipjVal));
+            beach.insert(pipjVal, new RegionNode(piSite, pjSite,pipjHE, pipjVal));
             beach.insert(piVal, new RegionNode(piSite, piVal));
             beach.insert(pipjVal + _beachlineBoost / 2f, new RegionNode(pjSite, pipjVal + _beachlineBoost / 2f));
 
@@ -429,7 +437,7 @@ namespace FortuneAlgo
 		 * handle valid circle event. 
 		 * Draws a Voronoi Vertex and removes arc from beachline
 		 */
-		public void handleCircleEvent(VoronoiEvent circleEvent, MinHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach, Dcel<LineSegment,Vector2> vd)
+		public void handleCircleEvent(VoronoiEvent circleEvent, MinHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach, DCEL vd)
 		{
             if ((vd == null) || (eventQueue == null) || (circleEvent == null) || (beach == null))
             {
@@ -595,6 +603,7 @@ namespace FortuneAlgo
         {
             MinHeap<VoronoiEvent> eventQueue = initEventQueue();
             RedBlackTree<RegionNode> beach = initBeachSO();
+
             fortuneAlgo(eventQueue, beach);
             return;
         }

@@ -4,18 +4,20 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 
-namespace CSHarpSandBox
+namespace FortuneAlgo
 {
     public class VoronoiDiagram
     {
         private List<Vector2> _sites;
-        // private DCEL _vdEdges;
-        // private BBox _vdBox;
+        private DCEL _vdDCEL;
+        private BBox _vdBox;
 
         //constructor
-        VoronoiDiagram()
+        VoronoiDiagram(List<Vector2> sites, BBox bbox)
         {
-            _sites = null!;
+            _sites = sites!;
+            _vdDCEL = null!;
+            _vdBox = bbox!;
         }
     }
 }

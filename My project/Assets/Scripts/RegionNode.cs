@@ -4,14 +4,12 @@
         Can be a site and its space or a parabola w a focus and directrix (sweepline)
  due: Thursday 11/29
 */
-using Ethereality.DoublyConnectedEdgeList;
 using FortuneAlgo;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Text;
-
 
 namespace CSHarpSandBox
 {
@@ -24,13 +22,13 @@ namespace CSHarpSandBox
 
         // Has cross-link with VoronoiVertex event.
         private VoronoiEvent _makerEvent;
-		private readonly HalfEdge<LineSegment, Vector2> _dcelEdge;
+		private HalfEdge _dcelHalfEdge;
 
 
         /* PROPERTIES */
         public List<Vector2> regionSites { get => this._regionSites; }
         public float weight { get => this._weight; }
-        internal HalfEdge<LineSegment, Vector2> dcelEdge { get => this._dcelEdge; }
+        public HalfEdge dcelEdge { get => this._dcelHalfEdge; }
 
         //only for triples
         public VoronoiEvent leafCircleEvent { get => this._makerEvent; set => this._makerEvent = value; }
@@ -43,18 +41,18 @@ namespace CSHarpSandBox
             _regionSites = new List<Vector2>{regionSite};
             this._weight = weight;
             this._makerEvent = null!;
-			this._dcelEdge = null!;
+			this._dcelHalfEdge = null!;
         }
 
 
         //constructor for internalNodes used in insertAndSplit
-        public RegionNode(Vector2 leftSite, Vector2 rightSite, float weight)
+        public RegionNode(Vector2 leftSite, Vector2 rightSite, HalfEdge dcelHalfEdge, float weight)
         {
 
             _regionSites = new List<Vector2> {leftSite, rightSite};
             this._weight = weight;
             this._makerEvent = null!;
-            this._dcelEdge = null!;
+            this._dcelHalfEdge = dcelHalfEdge;
         }
 		
 		//convenience method for telling if a node is a parent.
@@ -65,18 +63,29 @@ namespace CSHarpSandBox
 		
 		/*
 		 * change leaf to parent during split event
-		 * @param: regionDuo -- the new parabola pair that this edge is being traced by
+		 * @param: regionDuo -- the new parabola pair that this edge (two halfedges) is being traced by
+		 * @param: dcelHalfEdge -- one of two pre-made halfedge being traced out by two colliding parabolas,
+		 * specified by the regionDuo whose twin is the reverse of this regionDuo.
 		 * @param: vdDcel -- the master DCEL that we are drawing a dangling edge of
 		 */
-		public void leafToInternal(List<Vector2> regionDuo, Vector2 breakPt, List<LineSegment> vdSegments = null)
+		public void leafToInternal(List<Vector2> regionDuo, HalfEdge dcelHalfEdge)
 		{
 			// replace sites
 			this._regionSites = regionDuo;
             // make dangling dcelEdge TODO
-            LineSegment dangling = new LineSegment(breakPt);
-            //Vertex<LineSegment, Vector2> vertex = new Vertex<LineSegment, Vector2>(breakPt);
-            //HalfEdge<LineSegment, Vector2> breakPtHE = new HalfEdge<LineSegment, Vector2>(dangling, vertex);
-            vdSegments.Add(dangling);
+            //  Dcel<LineSegment, Vector2> vd = null! caller's responsibility to update DCEL before.
+            //LineSegment dangling = new LineSegment(breakPt);
+            //LineSegment danglingTwin = dangling.makeOwnTwin();
+            //Vertex<LineSegment, Vector2> vertex = new (breakPt);
+            //Vertex<LineSegment, Vector2> infVertex = new (LineSegment.INFINITY);
+            //HalfEdge<LineSegment, Vector2> breakPtUpHE = new (dangling, vertex);
+            //HalfEdge<LineSegment, Vector2> breakPtDownHE = new (danglingTwin, infVertex);
+            //breakPtUpHE.Twin = breakPtDownHE;
+            //breakPtDownHE.Twin = breakPtUpHE;
+            this._dcelHalfEdge = dcelHalfEdge;
+
+           
+            //vdSegments.Add(dangling);
 		}
 		
         
@@ -105,7 +114,8 @@ namespace CSHarpSandBox
             }
 
             _regionSites[deadIdx] = newArc;
-            this._dcelEdge.OriginalSegment.fillOtherEndPoint(circleCenter);
+            HalfEdge myTwin = this._dcelHalfEdge.Twin;
+            myTwin.Twin.Origin = new Vertex(myTwin, circleCenter);
 
             return 0;
         }
