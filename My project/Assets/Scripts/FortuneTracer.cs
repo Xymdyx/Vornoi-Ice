@@ -8,15 +8,25 @@ https://math.stackexchange.com/questions/2700033/explanation-of-method-for-findi
 https://blog.ivank.net/fortunes-algorithm-and-implementation.html
 https://jacquesheunis.com/post/fortunes-algorithm/
 https://stackoverflow.com/questions/9612065/breakpoint-convergence-in-fortunes-algorithm
+https://stackoverflow.com/questions/16695440/boost-intrusive-binary-search-trees/18264705
 */
+
+// MAJOR DESIGN STUFF:
+// 1. Finish handle circle event
+// 2. Finish site event
+// 2. Switch from RedBlackTree to SortedDictionary for beachline
+/*
+//https://www.boost.org/doc/libs/1_80_0/boost/polygon/voronoi_builder.hpp
+// https://www.geeksforgeeks.org/find-height-binary-tree-represented-parent-array/ get height of BST Node of element in sorted array in O(n) time
+// helpful for sorted dictionary approach
+*/
+
 using CSHarpSandBox;
 using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Drawing;
+using System.Collections.Generic; // sorted dictionary for beachline
 using System.Linq;
 using System.Numerics;
-using System.Security.Cryptography;
 using System.Text;
 //https://www.boost.org/doc/libs/1_80_0/boost/polygon/voronoi_builder.hpp
 
@@ -236,6 +246,13 @@ namespace FortuneAlgo
         */
         public bool detectCircleEvent(RBNode<RegionNode> left, RBNode<RegionNode> mid, RBNode<RegionNode> right, float sweepCoord, MinHeap<VoronoiEvent> eventQueue)
         {
+			
+			if (left == null || mid == null || right == null)
+            {
+                Console.WriteLine("One or more sites passed to detectCircleEvent is null");
+                return false;
+            }
+			
             RegionNode leftArc = left.obj;
             RegionNode midArc = mid.obj;
             RegionNode rightArc = right.obj;
@@ -326,9 +343,15 @@ namespace FortuneAlgo
 		* and another where pi.x >= pj.x
 		* only called when there is at least one arc in the beachline since we get at most 2n-1 arcs...
 		*/
-        private void insertAndSplit(Vector2 piSite, MinHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach, DCEL voronoiDCEL)
+        /*
+                * splits an arc in twain as described in handleSiteEvent. 2 cases, one where focus (pi.x) is < pj.x
+                * and another where pi.x >= pj.x
+                * only called when there is at least one arc in the beachline since we get at most 2n-1 arcs...
+                */
+        private RBNode<RegionNode> insertAndSplit(Vector2 piSite, MinHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach, DCEL voronoiDCEL)
         {
             RBNode<RegionNode> pjNode = findArcAboveSite(piSite, beach);
+            RegionNode piNode = null;
             RegionNode pjArc = pjNode.obj;
             Vector2 pjSite = pjArc.regionSites[0];
             Vector2 breakPt = default;
@@ -354,7 +377,7 @@ namespace FortuneAlgo
                 pjpiVal = pipjVal - _beachlineBoost;
 
                 piVal = (pipjVal + pjpiVal) / 2f;
-
+                piNode = new RegionNode(piSite, pjpiVal + _beachlineBoost / 2f);
                 //pj = internal pipj;
                 breakPt = new Vector2(pipjVal, piSite.Y);
                 pipjHE.Origin = new Vertex(pipjHE, breakPt);
@@ -368,15 +391,15 @@ namespace FortuneAlgo
                 beach.insert(pjpiVal, new RegionNode(pjSite, piSite, pjpiHE, pjpiVal));
                 beach.insert(pipjVal + _beachlineBoost, new RegionNode(pjSite, pipjVal + _beachlineBoost));
                 beach.insert(piVal, new RegionNode(pjSite, piVal));
-                beach.insert(pjpiVal + _beachlineBoost / 2f, new RegionNode(piSite, pjpiVal + _beachlineBoost / 2f));
-                return;
+                beach.insert(pjpiVal + _beachlineBoost / 2f, piNode);
+                return beach.find(piVal);
             }
 
             // Case 2: pj.x <= pi.x
             pjpiVal = getBreakPtX(pjSite, piSite, piSite.Y);
             pipjVal = pjpiVal + _beachlineBoost;
             piVal = (pipjVal + pjpiVal) / 2f;
-
+            piNode = new RegionNode(piSite, piVal);
             // pj = internal pjpi;
             breakPt = new Vector2(pjpiVal, piSite.Y);
             pjpiHE.Origin = new Vertex(pjpiHE, breakPt);
@@ -388,11 +411,11 @@ namespace FortuneAlgo
             // pi.val = pjpiVal and insertion
             pjNode.key = pjpiVal;
             beach.insert(pjpiVal - _beachlineBoost, new RegionNode(pjSite, pjpiVal - _beachlineBoost));
-            beach.insert(pipjVal, new RegionNode(piSite, pjSite,pipjHE, pipjVal));
-            beach.insert(piVal, new RegionNode(piSite, piVal));
+            beach.insert(pipjVal, new RegionNode(piSite, pjSite, pipjHE, pipjVal));
+            beach.insert(piVal, piNode);
             beach.insert(pipjVal + _beachlineBoost / 2f, new RegionNode(pjSite, pipjVal + _beachlineBoost / 2f));
 
-            return;
+            return beach.find(piVal);
         }
 
 
@@ -410,7 +433,7 @@ namespace FortuneAlgo
         /* 
 		 * handle site event. Splits an arc in half and modifies the RBT
 		 */
-        public void handleSiteEvent(float sweepCoord, MinHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach)
+        public void handleSiteEvent(float sweepCoord, MinHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach, DCEL voronoiDCEL)
 		{
 			//TODO
 			/*
@@ -430,6 +453,37 @@ namespace FortuneAlgo
 			There are 2 new ones that we need to check pjLPred,pjL,pi and pi,pjR,pjRS. If so, add circle event into Q along with a ptr betwn
 			the node in T, which also gets a ptr to the node in Q.
 			*/
+			
+			float piX = (float) eventQueue.extractHeadOfHeap();
+			
+			Vector2 piSite = new(piX, sweepCoord);
+			
+			//first parabola if beachline hasn't been filled already
+			if(beach.isEmpty())
+			{
+				beach.insert(piX, new RegionNode(piSite, piX));
+				return;
+			}
+			
+			RBNode<RegionNode> piNode = insertAndSplit(piSite, eventQueue, beach, voronoiDCEL);
+			RBNode<RegionNode> piSucc = beach.getSucc(piNode);
+			RBNode<RegionNode> piPred = beach.getPred(piNode);
+			
+			if(piPred != null)
+			{
+				RBNode<RegionNode> piPredPred = null;
+				piPredPred = beach.getPred(piPred);
+				if(piPredPred != null)
+					detectCircleEvent(piPredPred, piPred, piNode, sweepCoord, eventQueue);
+			}
+			
+			if(piSucc != null)
+			{
+				RBNode<RegionNode> piSuccSucc = null;
+				piSuccSucc = beach.getSucc(piSucc);
+				if(piSuccSucc != null)
+					detectCircleEvent(piNode, piSucc, piSuccSucc, sweepCoord, eventQueue);				
+			}
 			return;
 		}
 		
@@ -437,9 +491,9 @@ namespace FortuneAlgo
 		 * handle valid circle event. 
 		 * Draws a Voronoi Vertex and removes arc from beachline
 		 */
-		public void handleCircleEvent(VoronoiEvent circleEvent, MinHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach, DCEL vd)
+		public void handleCircleEvent(VoronoiEvent circleEvent, MinHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach, DCEL voronoiDCEL)
 		{
-            if ((vd == null) || (eventQueue == null) || (circleEvent == null) || (beach == null))
+            if ((voronoiDCEL == null) || (eventQueue == null) || (circleEvent == null) || (beach == null))
             {
                 Console.WriteLine("Something's null in handleCircleEvent, stopping now");
                 return;
@@ -462,22 +516,32 @@ namespace FortuneAlgo
             RBNode<RegionNode> squeezedPred = beach.getPred(squeezedNode)!;
             RBNode<RegionNode> squeezedSuccSucc = null!;
             RBNode<RegionNode> squeezedPredPred = null!;
-
+            RBNode<RegionNode> queryParentNode = null!;
             Vector2 circleCenter = circleEvent.circleEventCenter;
             Vector2 updatedSite = default;
+
+            Vertex ccVertex = new(circleCenter);
+            HalfEdge ccPiPkHE = new();
+            ccPiPkHE.Origin = ccVertex;
+            HalfEdge ccPiPkDanglingHE = new();
+            ccPiPkDanglingHE.Origin = voronoiDCEL.InfiniteVertex;
+            setHETwins(ccPiPkHE, ccPiPkDanglingHE);
 
             // update all breakpts to no longer have squeezed
             // the triple of consecutive sites
             // pi,pj,pk on the sweep-line status is replaced with pi,pk
-            // TODO 11/4. Clip DCEL edges
+
+            // TODO 11/4. Clip DCEL half edges...by replacing infinite halfedges with circle center
+            // clip this arc and its parent from the beachline
             if (squeezedParent != null)
             {
                 updatedSite = (squeezedNode == squeezedParent.right) ? squeezedPred.obj.regionSites[0] : squeezedSucc.obj.regionSites[0];
-                squeezedParent.obj.updateInternal(squeezedFocus, updatedSite, circleCenter);
+                queryParentNode = (squeezedNode == squeezedParent.right) ? squeezedSucc.parent : squeezedPred.parent;
+                queryParentNode.obj.updateInternal(squeezedFocus, updatedSite, circleCenter, voronoiDCEL);
             }
             if (squeezedGrandParent != null)
             {
-                squeezedGrandParent.obj.updateInternal(squeezedFocus, updatedSite, circleCenter);
+                squeezedGrandParent.obj.updateInternal(squeezedFocus, updatedSite, circleCenter, voronoiDCEL);
             }
 
             // disable all circle events involving squeezed
@@ -495,29 +559,29 @@ namespace FortuneAlgo
             }
 
             // update the higher-up internal node with pj to represent pipk...
-            // this should be an adjacent arc's parent != removed arc's parent, aka a grandparent
+            // this should be an adjacent arc's parent != removed arc's parent, aka a grand(x times) parent
+
+            // delete squeezedArc a and its parent
             beach.delete(squeezedArc.weight, squeezedArc);
 
             if(squeezedParent != null)
                 beach.delete(squeezedParent.key, squeezedParent.obj);
 
+            // add circle center to vertices and bind 2 halfEdges to it. IN PROGRESS 11/12
+            HalfEdge fromCircleHE = new();
+            HalfEdge toCircleHE = new();
+            Vertex fromCircleVert = new(fromCircleHE, circleCenter);
+            // set toCircle's next to be edge that doesn't have circleCenter as origin.
+            toCircleHE.Origin = voronoiDCEL.InfiniteVertex;
+            // set fromCircle's prev to be edge that doesn't have circleCenter as origin.
+            fromCircleHE.Origin = fromCircleVert;
+            setHETwins(fromCircleHE, toCircleHE);
+            voronoiDCEL.Add(toCircleHE, fromCircleHE);
+            voronoiDCEL.Add(fromCircleVert);
 
-            // add circle center to vertices and bind 2 halfEdges to it. IN PROGRESS 11/3
-            /*LineSegment upDangling = new LineSegment(circleCenter);
-            LineSegment downDangling = upDangling.makeOwnTwin();
 
-            Vertex<LineSegment, Vector2> eventCenter = new Vertex<LineSegment, Vector2>(circleCenter);
-            HalfEdge<LineSegment, Vector2> newHEDown = new HalfEdge<LineSegment, Vector2>(downDangling, eventCenter);
-            HalfEdge<LineSegment, Vector2> newHEUp = new HalfEdge<LineSegment, Vector2>(upDangling, eventCenter);
-            setHETwins(newHEUp, newHEDown);
-            eventCenter.HalfEdges.Add(newHEDown);
-            eventCenter.HalfEdges.Add(newHEUp);
-
-            vd.Vertices.Append(eventCenter);*/
-
-            // add 3 new records to half-edge records that end at the circle center...i.e. the end vertex for one half-edge
+            // add 3 new records to half-edge records that end at the circle center...i.e. the end vertex for two half-edges
             // the prev, and the next...? 11/4
-
 
             // detect future circle events involving new neighbors
             if((squeezedPred != null) && (squeezedSucc != null) &&  (squeezedSuccSucc != null))
