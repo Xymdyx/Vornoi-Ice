@@ -4,12 +4,11 @@
         Can be a site and its space or a parabola w a focus and directrix (sweepline)
  due: Thursday 11/29
 */
-using FortuneAlgo;
 using System.Numerics;
+using System.Linq;
 using System;
-using System.Text;
 using System.Collections.Generic;
-namespace CSHarpSandBox
+namespace FortuneAlgo
 {
     // open to expansion later on. 
     public class RegionNode
@@ -26,7 +25,7 @@ namespace CSHarpSandBox
         /* PROPERTIES */
         public List<Vector2> regionSites { get => this._regionSites; }
         public float weight { get => this._weight; }
-        public HalfEdge dcelEdge { get => this._dcelHalfEdge; }
+        public HalfEdge dcelEdge { get => this._dcelHalfEdge; internal set => this._dcelHalfEdge = value; }
 
         //only for triples
         public VoronoiEvent leafCircleEvent { get => this._makerEvent; set => this._makerEvent = value; }

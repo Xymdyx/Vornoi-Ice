@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using FortuneAlgo;
 
-namespace CSHarpSandBox
+namespace FortuneAlgo
 {
     public class VoronoiEvent
     {

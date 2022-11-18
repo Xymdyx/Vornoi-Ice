@@ -21,7 +21,6 @@ https://stackoverflow.com/questions/16695440/boost-intrusive-binary-search-trees
 // helpful for sorted dictionary approach
 */
 
-using CSHarpSandBox;
 using System;
 using System.Collections;
 using System.Collections.Generic; // sorted dictionary for beachline
@@ -52,7 +51,7 @@ namespace FortuneAlgo
     {
         /*------------------------------- FIELDS -------------------------------*/
 
-        private const float _toleranceThreshold = 1e-8f;
+        public static float _toleranceThreshold = 1e-5f;
 		private const float _beachlineBoost = 1e-10f;
         private const float _convergeDivisor = 10f;
         private int _siteCount;
@@ -140,7 +139,7 @@ namespace FortuneAlgo
                 * (s1.Y - sweepCoord) + (s1.Y - s2.Y) * (s1.Y - sweepCoord) * (s2.Y - sweepCoord);
 
             // if a=0, quadratic formula does not apply
-            if (Math.Abs(a) < 0.001)
+            if (Math.Abs(a) < _toleranceThreshold)
                 return -c / b;
 
             float x1 = (-b + (float)Math.Sqrt(b * b - (4 * a * c))) / (2 * a);
@@ -343,15 +342,10 @@ namespace FortuneAlgo
 		* and another where pi.x >= pj.x
 		* only called when there is at least one arc in the beachline since we get at most 2n-1 arcs...
 		*/
-        /*
-                * splits an arc in twain as described in handleSiteEvent. 2 cases, one where focus (pi.x) is < pj.x
-                * and another where pi.x >= pj.x
-                * only called when there is at least one arc in the beachline since we get at most 2n-1 arcs...
-                */
         private RBNode<RegionNode> insertAndSplit(Vector2 piSite, MinHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach, DCEL voronoiDCEL)
         {
             RBNode<RegionNode> pjNode = findArcAboveSite(piSite, beach);
-            RegionNode piNode = null;
+            RegionNode piNode = null!;
             RegionNode pjArc = pjNode.obj;
             Vector2 pjSite = pjArc.regionSites[0];
             Vector2 breakPt = default;
@@ -362,58 +356,75 @@ namespace FortuneAlgo
             float pipjVal = 0.0f;
             float pjpiVal = 0.0f;
             float piVal = 0.0f;
+            float upperPjVal = 0.0f;
+            float lowerPjVal = 0.0f;
 
-            //we can use this divisor to allow us to exploit an infinite range.. 11/3 TODO
-            // ALSO ADD THE DCEL EDGES ... 11/3 TODO
-
-            float levelDivisor = 2f;
+            //we can use this divisor to allow us to exploit an infinite range
+            float levelDivisor = 1f;
+            RBNode<RegionNode> temp = pjNode;
+            
+            while(temp.parent != null) 
+            {
+                temp = temp.parent;
+                levelDivisor += 1;
+            }
 
             // TODO...inserting left->right per level seems to minimize rotation...10/29
             // however, the longevity of this insertion pattern is dubious..
             // Try average as values for inner leaf nodes. Maybe used the height of returned node for divisor...
-            if (pjSite.X > piSite.X)
+
+            // 11/16 -- INSERT THE BREAKPT NODE FIRST so it can become an internal rather than a leaf...
+            // ... verified 11/17.. prepare to test
+            if (piSite.X < pjSite.X)
             {
                 pipjVal = getBreakPtX(piSite, pjSite, piSite.Y);
-                pjpiVal = pipjVal - _beachlineBoost;
+                pjpiVal = pipjVal - (_beachlineBoost / levelDivisor);
+                upperPjVal = pipjVal + (_beachlineBoost / levelDivisor);
+                lowerPjVal = pjpiVal - (_beachlineBoost / (levelDivisor + 1));
 
                 piVal = (pipjVal + pjpiVal) / 2f;
-                piNode = new RegionNode(piSite, pjpiVal + _beachlineBoost / 2f);
+                piNode = new RegionNode(piSite, piVal);
+
                 //pj = internal pipj;
                 breakPt = new Vector2(pipjVal, piSite.Y);
-                pipjHE.Origin = new Vertex(pipjHE, breakPt);
-                pjpiHE.Origin = voronoiDCEL.InfiniteVertex;
+                pipjHE.Origin = voronoiDCEL.InfiniteVertex; //right halfedge
+                pjpiHE.Origin = new Vertex(pipjHE, breakPt); //left halfedge
                 setHETwins(pipjHE, pjpiHE);
                 regionDuo = new List<Vector2> { piSite, pjSite };
                 pjArc.leafToInternal(regionDuo, pipjHE);
 
                 //pj.val = pipjVal and insertion
                 pjNode.key = pipjVal;
-                beach.insert(pjpiVal, new RegionNode(pjSite, piSite, pjpiHE, pjpiVal));
-                beach.insert(pipjVal + _beachlineBoost, new RegionNode(pjSite, pipjVal + _beachlineBoost));
-                beach.insert(piVal, new RegionNode(pjSite, piVal));
-                beach.insert(pjpiVal + _beachlineBoost / 2f, piNode);
+                beach.insert(pjpiVal, new RegionNode(pjSite, piSite, pjpiHE, pjpiVal)); //breakpt first - 11/16
+                beach.insert(upperPjVal, new RegionNode(pjSite, upperPjVal));
+                beach.insert(lowerPjVal, new RegionNode(pjSite, lowerPjVal));
+                beach.insert(piVal, piNode);
                 return beach.find(piVal);
             }
 
-            // Case 2: pj.x <= pi.x
+            // Case 2:  pi.x >= pj.x... verified 11/17.. prepare to test
             pjpiVal = getBreakPtX(pjSite, piSite, piSite.Y);
-            pipjVal = pjpiVal + _beachlineBoost;
+            pipjVal = pjpiVal + (_beachlineBoost / levelDivisor);
+            upperPjVal = pjpiVal - (_beachlineBoost / levelDivisor);
+            lowerPjVal = pipjVal + (_beachlineBoost / (levelDivisor + 1));
+
             piVal = (pipjVal + pjpiVal) / 2f;
             piNode = new RegionNode(piSite, piVal);
+
             // pj = internal pjpi;
             breakPt = new Vector2(pjpiVal, piSite.Y);
-            pjpiHE.Origin = new Vertex(pjpiHE, breakPt);
-            pipjHE.Origin = voronoiDCEL.InfiniteVertex;
+            pjpiHE.Origin = new Vertex(pjpiHE, breakPt); //left he
+            pipjHE.Origin = voronoiDCEL.InfiniteVertex; //right he
             setHETwins(pjpiHE, pipjHE);
             regionDuo = new List<Vector2> { pjSite, piSite };
             pjArc.leafToInternal(regionDuo, pjpiHE);
 
             // pi.val = pjpiVal and insertion
             pjNode.key = pjpiVal;
-            beach.insert(pjpiVal - _beachlineBoost, new RegionNode(pjSite, pjpiVal - _beachlineBoost));
-            beach.insert(pipjVal, new RegionNode(piSite, pjSite, pipjHE, pipjVal));
+            beach.insert(pipjVal, new RegionNode(piSite, pjSite, pipjHE, pipjVal)); // changed to be first 11/16			
+            beach.insert(upperPjVal, new RegionNode(pjSite, upperPjVal));
             beach.insert(piVal, piNode);
-            beach.insert(pipjVal + _beachlineBoost / 2f, new RegionNode(pjSite, pipjVal + _beachlineBoost / 2f));
+            beach.insert(lowerPjVal, new RegionNode(pjSite, lowerPjVal));
 
             return beach.find(piVal);
         }
@@ -486,7 +497,35 @@ namespace FortuneAlgo
 			}
 			return;
 		}
-		
+		/// <summary>
+        /// private helper function for handleCircleEvent
+        /// that sets the halfedge pointers appropriately
+        /// left halfedges come from starting breakpt
+        /// right halfedges end at the voronoi vertex
+        /// </summary>
+        private void setCircleHEPtrs(HalfEdge parentHE, HalfEdge upParentHE, HalfEdge newLeftHE, HalfEdge newRightHE) 
+        {
+            // grab the left halfedges of each then we know their twins are the right halfedges
+            HalfEdge parentLeftHE = (parentHE.Origin != newLeftHE.Origin) ? parentHE : parentHE.Twin;
+            HalfEdge upParentLeftHE = (upParentHE.Origin != newLeftHE.Origin) ? upParentHE : parentHE.Twin;
+
+            // determine leftmost left HE then we get the rest
+            HalfEdge leftLeftHE = (parentLeftHE.Origin.Position.X <= upParentLeftHE.Origin.Position.X) ? parentLeftHE : upParentLeftHE;
+            HalfEdge rightLeftHE = (parentLeftHE == leftLeftHE) ? upParentLeftHE : parentLeftHE;
+            HalfEdge leftRightHE = leftLeftHE.Twin;
+            HalfEdge rightRightHE = rightLeftHE.Twin;
+
+            // set prevs and nexts so we define faces in CCW fashion
+            leftLeftHE.Next = rightRightHE;
+            rightRightHE.Prev = leftLeftHE;
+            leftRightHE.Prev = newRightHE;
+            newRightHE.Next = leftRightHE;
+            newLeftHE.Prev = rightLeftHE;
+            rightLeftHE.Next = newLeftHE;
+
+            return;
+        }
+
 		/* 
 		 * handle valid circle event. 
 		 * Draws a Voronoi Vertex and removes arc from beachline
@@ -517,34 +556,59 @@ namespace FortuneAlgo
             RBNode<RegionNode> squeezedSuccSucc = null!;
             RBNode<RegionNode> squeezedPredPred = null!;
             RBNode<RegionNode> queryParentNode = null!;
+			HalfEdge parentInternalHE = null!;
+			HalfEdge higherInternalHE = null!;
             Vector2 circleCenter = circleEvent.circleEventCenter;
             Vector2 updatedSite = default;
 
-            Vertex ccVertex = new(circleCenter);
-            HalfEdge ccPiPkHE = new();
-            ccPiPkHE.Origin = ccVertex;
-            HalfEdge ccPiPkDanglingHE = new();
-            ccPiPkDanglingHE.Origin = voronoiDCEL.InfiniteVertex;
-            setHETwins(ccPiPkHE, ccPiPkDanglingHE);
+			
+			// 2. add circle center to vertices and bind 2 halfEdges to it. IN PROGRESS 11/12
+            HalfEdge fromCircleHE = new();
+            HalfEdge toCircleHE = new();
+            Vertex fromCircleVert = new(fromCircleHE, circleCenter);
+            // set toCircle's next to be edge that doesn't have circleCenter as origin.
+            toCircleHE.Origin = voronoiDCEL.InfiniteVertex;
+            // set fromCircle's prev to be edge that doesn't have circleCenter as origin.
+            fromCircleHE.Origin = fromCircleVert;
+            setHETwins(fromCircleHE, toCircleHE);
+            voronoiDCEL.Add(toCircleHE, fromCircleHE);
+            voronoiDCEL.Add(fromCircleVert);
 
             // update all breakpts to no longer have squeezed
             // the triple of consecutive sites
             // pi,pj,pk on the sweep-line status is replaced with pi,pk
 
             // TODO 11/4. Clip DCEL half edges...by replacing infinite halfedges with circle center
-            // clip this arc and its parent from the beachline
+			// 2. update the parent, DO NOT DELETE.            
             if (squeezedParent != null)
             {
-                updatedSite = (squeezedNode == squeezedParent.right) ? squeezedPred.obj.regionSites[0] : squeezedSucc.obj.regionSites[0];
+                updatedSite = (squeezedNode == squeezedParent.right) ? squeezedPred.obj.regionSites[0] : squeezedSucc.obj.regionSites[1];
+                squeezedParent.obj.updateInternal(squeezedFocus, updatedSite, circleCenter, voronoiDCEL);
+				parentInternalHE = squeezedParent.obj.dcelEdge;
+				squeezedParent.obj.dcelEdge = toCircleHE;
+				
                 queryParentNode = (squeezedNode == squeezedParent.right) ? squeezedSucc.parent : squeezedPred.parent;
-                queryParentNode.obj.updateInternal(squeezedFocus, updatedSite, circleCenter, voronoiDCEL);
             }
-            if (squeezedGrandParent != null)
+			
+			// we check for another internal node further up the tree that contains the squeezed site
+            if (queryParentNode != null)
             {
-                squeezedGrandParent.obj.updateInternal(squeezedFocus, updatedSite, circleCenter, voronoiDCEL);
+				while( !(queryParentNode.obj.regionSites.Contains(squeezedFocus)) && queryParentNode != null)
+					queryParentNode = queryParentNode.parent;
+				
+				if(queryParentNode != null) //2. update higher up internal node
+				{
+					queryParentNode.obj.updateInternal(squeezedFocus, updatedSite, circleCenter, voronoiDCEL);
+                    higherInternalHE = queryParentNode.obj.dcelEdge;
+					queryParentNode.obj.dcelEdge = fromCircleHE;
+
+                    // add 3 new records to half-edge records that end at the circle center...i.e. the end vertex for two half-edges
+                    // the prev, and the next...? 11/4
+                    setCircleHEPtrs(parentInternalHE, higherInternalHE, fromCircleHE, toCircleHE);
+				}				
             }
 
-            // disable all circle events involving squeezed
+            // 1. disable all circle events involving squeezed
             // and get nodes for future circle events
             squeezedArc.leafCircleEvent.disableCircleEvent();
             if (squeezedSucc != null)
@@ -561,29 +625,10 @@ namespace FortuneAlgo
             // update the higher-up internal node with pj to represent pipk...
             // this should be an adjacent arc's parent != removed arc's parent, aka a grand(x times) parent
 
-            // delete squeezedArc a and its parent
+            // 1. delete squeezedArc a and its parent
             beach.delete(squeezedArc.weight, squeezedArc);
 
-            if(squeezedParent != null)
-                beach.delete(squeezedParent.key, squeezedParent.obj);
-
-            // add circle center to vertices and bind 2 halfEdges to it. IN PROGRESS 11/12
-            HalfEdge fromCircleHE = new();
-            HalfEdge toCircleHE = new();
-            Vertex fromCircleVert = new(fromCircleHE, circleCenter);
-            // set toCircle's next to be edge that doesn't have circleCenter as origin.
-            toCircleHE.Origin = voronoiDCEL.InfiniteVertex;
-            // set fromCircle's prev to be edge that doesn't have circleCenter as origin.
-            fromCircleHE.Origin = fromCircleVert;
-            setHETwins(fromCircleHE, toCircleHE);
-            voronoiDCEL.Add(toCircleHE, fromCircleHE);
-            voronoiDCEL.Add(fromCircleVert);
-
-
-            // add 3 new records to half-edge records that end at the circle center...i.e. the end vertex for two half-edges
-            // the prev, and the next...? 11/4
-
-            // detect future circle events involving new neighbors
+            // 3. detect future circle events involving new neighbors
             if((squeezedPred != null) && (squeezedSucc != null) &&  (squeezedSuccSucc != null))
                 detectCircleEvent(squeezedPred, squeezedSucc, squeezedSuccSucc, sweepCoord, eventQueue);
             if ((squeezedPredPred != null) && (squeezedPred != null) &&  (squeezedSucc != null))
@@ -613,9 +658,10 @@ namespace FortuneAlgo
         // algorithm that executes Fortune's algo for Voronoi diagrams
         // via using sweepline and beachline of parabolas 
         // @returns a built DCEL
-        public void fortuneAlgo(MinHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach)
+        public DCEL fortuneAlgo(MinHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach)
         {
             //TODO
+			DCEL voronoiDCEL = new();
             //Dcel<LineSegment, Vector2> voronoiDCEL = new Dcel<LineSegment, Vector2>();
 			//1.Fill the event queue with site events for each input site.
 			//2.While the event queue still has items in it:
@@ -624,7 +670,7 @@ namespace FortuneAlgo
 			//    Otherwise it must be an edge-intersection event:
 			//        Remove the squeezed cell from the beachline
 			//3.Cleanup any remaining intermediate state
-            return;
+            return voronoiDCEL;
         }
 
         // initialize eventQueueLine
