@@ -24,11 +24,13 @@ https://stackoverflow.com/questions/16695440/boost-intrusive-binary-search-trees
 using System;
 using System.Collections;
 using System.Collections.Generic; // sorted dictionary for beachline
+using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using System.Text;
 //https://www.boost.org/doc/libs/1_80_0/boost/polygon/voronoi_builder.hpp
-
+// https://www.emathhelp.net/calculators/algebra-2/parabola-calculator/ -- parabola resources
+// parabola calculator: https://www.omnicalculator.com/math/parabola
 // section header:
 
 /*------------------------------- SECTION HEADER -------------------------------*/
@@ -56,21 +58,21 @@ namespace FortuneAlgo
         private const float _convergeDivisor = 10f;
         private int _siteCount;
         private List<Vector2> _sites;
-        private MinHeap<VoronoiEvent> _pq;
+        private MaxHeap<VoronoiEvent> _pq;
         // we use only site events in the beachline per Dave Mount's Lecture Notes
         private RedBlackTree<float> _beachLine;
-        // private _bBox;
+        private BBox _bbox;
         public VoronoiDiagram _vd;
 
 
         /*------------------------------- CONSTRUCTOR -------------------------------*/
-        public FortuneTracer(List<Vector2> sites)
+        public FortuneTracer(List<Vector2> sites, BBox bbox)
         {
             this._sites = sites;
             this._siteCount = _sites.Count;
             //given as lowerLeft and upperRight corners
             //of 2d face of VoronoiObj in Unity. Bounds Voronoi Diagram
-            //this._bBox =  bBox;
+            this._bbox =  bbox;
             this._pq = null!;
             this._beachLine = null!;
             this._vd = null!;
@@ -243,7 +245,7 @@ namespace FortuneAlgo
 		* Get Distance between circumcenter and site then find min y value of circle.
 		* If it's below sweepline and the left and right breakpts converge, we've a circle event to add to the queue
         */
-        public bool detectCircleEvent(RBNode<RegionNode> left, RBNode<RegionNode> mid, RBNode<RegionNode> right, float sweepCoord, MinHeap<VoronoiEvent> eventQueue)
+        public bool detectCircleEvent(RBNode<RegionNode> left, RBNode<RegionNode> mid, RBNode<RegionNode> right, float sweepCoord, MaxHeap<VoronoiEvent> eventQueue)
         {
 			
 			if (left == null || mid == null || right == null)
@@ -291,7 +293,6 @@ namespace FortuneAlgo
                 !checkIfCloserInFuture(circCenter, leftBp, rightBp, sweepCoord, dist1))
                 return false;
 
-            //TODO
             //add circle event to EventQueue... give a reference to the squeezedArcNode
             VoronoiEvent circEvent = new VoronoiEvent(circCenter, circBottomY, mid, circCenter);
             eventQueue.InsertElementInHeap(circBottomY, circEvent);
@@ -342,7 +343,7 @@ namespace FortuneAlgo
 		* and another where pi.x >= pj.x
 		* only called when there is at least one arc in the beachline since we get at most 2n-1 arcs...
 		*/
-        private RBNode<RegionNode> insertAndSplit(Vector2 piSite, MinHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach, DCEL voronoiDCEL)
+        private RBNode<RegionNode> insertAndSplit(Vector2 piSite, MaxHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach, DCEL voronoiDCEL)
         {
             RBNode<RegionNode> pjNode = findArcAboveSite(piSite, beach);
             RegionNode piNode = null!;
@@ -432,7 +433,7 @@ namespace FortuneAlgo
 
         /*------------------------------- CIRCLE EVENT METHODS -------------------------------*/
         //removes an arc as described in handleCircleEvent.
-        private void removeArc(float sweepCoord, MinHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach)
+        private void removeArc(float sweepCoord, MaxHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach)
 		{
 			//TODO
 			return;
@@ -441,10 +442,14 @@ namespace FortuneAlgo
 
         /*------------------------------- HANDLE EVENT METHODS -------------------------------*/
 
-        /* 
-		 * handle site event. Splits an arc in half and modifies the RBT
-		 */
-        public void handleSiteEvent(float sweepCoord, MinHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach, DCEL voronoiDCEL)
+        /// <summary>
+        /// handle site event. Splits an arc in half and modifies the RBT
+        /// </summary>
+        /// <param name="sweepCoord"></param>
+        /// <param name="eventQueue"></param>
+        /// <param name="beach"></param>
+        /// <param name="voronoiDCEL"></param>
+        public void handleSiteEvent(float sweepCoord, MaxHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach, DCEL voronoiDCEL)
 		{
 			//TODO
 			/*
@@ -465,12 +470,11 @@ namespace FortuneAlgo
 			the node in T, which also gets a ptr to the node in Q.
 			*/
 			
-			float piX = (float) eventQueue.extractHeadOfHeap();
-			
-			Vector2 piSite = new(piX, sweepCoord);
-			
-			//first parabola if beachline hasn't been filled already
-			if(beach.isEmpty())
+			Vector2 piSite = eventQueue.peekTopOfObjHeap().eventSite;
+            float piX = piSite.X;
+
+            //first parabola if beachline hasn't been filled already
+            if (beach.isEmpty())
 			{
 				beach.insert(piX, new RegionNode(piSite, piX));
 				return;
@@ -482,7 +486,7 @@ namespace FortuneAlgo
 			
 			if(piPred != null)
 			{
-				RBNode<RegionNode> piPredPred = null;
+				RBNode<RegionNode> piPredPred = null!;
 				piPredPred = beach.getPred(piPred);
 				if(piPredPred != null)
 					detectCircleEvent(piPredPred, piPred, piNode, sweepCoord, eventQueue);
@@ -490,7 +494,7 @@ namespace FortuneAlgo
 			
 			if(piSucc != null)
 			{
-				RBNode<RegionNode> piSuccSucc = null;
+				RBNode<RegionNode> piSuccSucc = null!;
 				piSuccSucc = beach.getSucc(piSucc);
 				if(piSuccSucc != null)
 					detectCircleEvent(piNode, piSucc, piSuccSucc, sweepCoord, eventQueue);				
@@ -530,13 +534,16 @@ namespace FortuneAlgo
 		 * handle valid circle event. 
 		 * Draws a Voronoi Vertex and removes arc from beachline
 		 */
-		public void handleCircleEvent(VoronoiEvent circleEvent, MinHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach, DCEL voronoiDCEL)
+		public void handleCircleEvent(VoronoiEvent circleEvent, MaxHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach, DCEL voronoiDCEL)
 		{
             if ((voronoiDCEL == null) || (eventQueue == null) || (circleEvent == null) || (beach == null))
             {
                 Console.WriteLine("Something's null in handleCircleEvent, stopping now");
                 return;
             }
+
+            if (!circleEvent.circleEventIsActive)
+                return;
 
             float sweepCoord = circleEvent.weight;
             RBNode<RegionNode> squeezedNode = circleEvent.squeezedArcLeaf!;
@@ -593,17 +600,15 @@ namespace FortuneAlgo
 			// we check for another internal node further up the tree that contains the squeezed site
             if (queryParentNode != null)
             {
-				while( !(queryParentNode.obj.regionSites.Contains(squeezedFocus)) && queryParentNode != null)
+                //2. update higher up internal node
+                while ( !(queryParentNode.obj.regionSites.Contains(squeezedFocus)) && queryParentNode != null)
 					queryParentNode = queryParentNode.parent;
 				
-				if(queryParentNode != null) //2. update higher up internal node
+				if(queryParentNode != null) 
 				{
 					queryParentNode.obj.updateInternal(squeezedFocus, updatedSite, circleCenter, voronoiDCEL);
                     higherInternalHE = queryParentNode.obj.dcelEdge;
 					queryParentNode.obj.dcelEdge = fromCircleHE;
-
-                    // add 3 new records to half-edge records that end at the circle center...i.e. the end vertex for two half-edges
-                    // the prev, and the next...? 11/4
                     setCircleHEPtrs(parentInternalHE, higherInternalHE, fromCircleHE, toCircleHE);
 				}				
             }
@@ -627,6 +632,9 @@ namespace FortuneAlgo
 
             // 1. delete squeezedArc a and its parent
             beach.delete(squeezedArc.weight, squeezedArc);
+
+            // add 3 new records to half-edge records that end at the circle center...i.e. the end vertex for two half-edges
+            // the prev, and the next...? 11/4
 
             // 3. detect future circle events involving new neighbors
             if((squeezedPred != null) && (squeezedSucc != null) &&  (squeezedSuccSucc != null))
@@ -653,41 +661,88 @@ namespace FortuneAlgo
 		}
 
 
-        /*------------------------------- MAIN ALGO & PREP -------------------------------*/
+        /*------------------------------- Main Algo Prep, Loop, and Finish -------------------------------*/
 
-        // algorithm that executes Fortune's algo for Voronoi diagrams
-        // via using sweepline and beachline of parabolas 
-        // @returns a built DCEL
-        public DCEL fortuneAlgo(MinHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach)
+        /// <summary>
+        /// once we've gone through Fortune's algo, we clean up intermediate state
+        /// </summary>
+        /// <param name="voronoiDCEL"> the unbounded DCEL that represents
+        /// the Voronoi Diagram </param>
+        /// <param name="beach"> the beachline that may still have infinite edges 
+        /// that must be clipped </param>
+        /// <param name="bbox"> the Bounding Box for the voronoi diagram that we
+        /// will clip the infinite edges remaining in beach to </param>
+        /// <returns></returns>
+        public DCEL clipVoronoiDiagram(DCEL voronoiDCEL, RedBlackTree<RegionNode> beach, BBox bbox)
         {
-            //TODO
+            // TODO 11/18...
+            // get this working once we can confirm the algo runs correctly
+            // extend infiinite halfedges and see which segments of the bounding box they intersect
+            // set the infinite vertices to their intersection pt with the bounding box
+
+            // foreach remaining halfedge (acquired by inorder traversal and taking internal nodes HEs):
+                // find line repped by the edge
+                // find all intersections with bbox edges
+                // take closest intersection point that lies on the halfedge
+            return voronoiDCEL;
+        }
+
+        /// <summary>
+        /// algorithm that executes Fortune's algo for Voronoi diagrams
+        /// via using sweepline and beachline of parabolas 
+        /// </summary>
+        /// <param name="eventQueue"></param>
+        /// <param name="beach"></param>
+        /// <returns></returns>
+        // @returns a built DCEL
+        public DCEL fortuneAlgo(MaxHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach)
+        {
 			DCEL voronoiDCEL = new();
+            float eventY;
+            VoronoiEvent currEvent;
             //Dcel<LineSegment, Vector2> voronoiDCEL = new Dcel<LineSegment, Vector2>();
-			//1.Fill the event queue with site events for each input site.
-			//2.While the event queue still has items in it:
-			//    If the next event on the queue is a site event:
-			//        Add the new site to the beachline
-			//    Otherwise it must be an edge-intersection event:
-			//        Remove the squeezed cell from the beachline
-			//3.Cleanup any remaining intermediate state
+            //1.Fill the event queue with site events for each input site.
+            //2.While the event queue still has items in it:
+            //    If the next event on the queue is a site event:
+            //        Add the new site to the beachline
+            //    Otherwise it must be an edge-intersection event:
+            //        Remove the squeezed cell from the beachline
+            while (!eventQueue.heapEmpty()) 
+            {
+                eventY = (float) eventQueue.peekTopOfHeap();
+                currEvent = eventQueue.peekTopOfObjHeap();
+                Debug.Assert(currEvent.eventSite.Y == eventY);
+
+                if (currEvent.isSiteEvent())
+                    handleSiteEvent(eventY, eventQueue, beach, voronoiDCEL);
+                else if(!currEvent.isSiteEvent() && currEvent.circleEventIsActive)
+                    handleCircleEvent(currEvent, eventQueue, beach, voronoiDCEL);
+
+                eventQueue.extractHeadOfHeap();
+            }
+            //TODO
+            //3.Cleanup any remaining intermediate state via bounding box clipping
+            clipVoronoiDiagram(voronoiDCEL, beach, this._bbox);
             return voronoiDCEL;
         }
 
         // initialize eventQueueLine
-		// TODO may need to switch to maximal Y or switch beachline to be ordered by X...
-        public MinHeap<VoronoiEvent> initEventQueue()
+		// sort by events maximal Y then by X
+        public MaxHeap<VoronoiEvent> initEventQueue()
         {
             List<Vector2> orderedSites = new List<Vector2>(this._sites);
             List<VoronoiEvent> events = new List<VoronoiEvent>();
-            // sort by minimal y then x
+            // sort by minimal y then by x
             orderedSites.Sort((s1, s2) =>
             {
-                int ret = s1.X.CompareTo(s2.X);
-                return ret != 0 ? ret : s1.Y.CompareTo(s2.Y);
+                int ret = s1.Y.CompareTo(s2.Y);
+                return ret != 0 ? ret : s1.X.CompareTo(s2.X);
             });
 
+            // reverse to be maximal y
+            orderedSites.Reverse();
             VoronoiEvent ev = null!;
-            MinHeap<VoronoiEvent> pq = new MinHeap<VoronoiEvent>();
+            MaxHeap<VoronoiEvent> pq = new MaxHeap<VoronoiEvent>();
             foreach (Vector2 site in orderedSites)
             {
                 ev = new VoronoiEvent(site, site.Y);
@@ -711,10 +766,16 @@ namespace FortuneAlgo
         //main algorithm for this class
         public void fortuneMain()
         {
-            MinHeap<VoronoiEvent> eventQueue = initEventQueue();
+            DCEL vorDiagram = null!;
+            //test inits
+            MaxHeap<VoronoiEvent> eventQueue = initEventQueue();
             RedBlackTree<RegionNode> beach = initBeachSO();
-
-            fortuneAlgo(eventQueue, beach);
+            // 11/18...TO TEST
+            // test insert and split
+            // test getBreakPtX()
+            // test getCircumCenter()
+            // test
+            //vorDiagram = fortuneAlgo(eventQueue, beach);
             return;
         }
     }

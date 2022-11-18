@@ -1,7 +1,6 @@
 ﻿
-/* desc: a generic minHeap that can be used to shuffle around objects such that
- * the lowest value is at the front of an array. Used in Fortune's beachline algo
- for Vornoi Diagrams.
+/* desc: a generic maxHeap that can be used to shuffle around objects such that
+ * the highest value is at the front of an array. Used in Photon Mapping
  * with its children located at 2i + 2i+1
  * author: Xymdyx 
  * date: 4/22/22
@@ -9,31 +8,32 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using System.Linq;
 
 namespace FortuneAlgo
 {
-    public class MinHeap<T>
+    public class MaxHeap<T>
     {
         private const bool debug = false;
+
         private List<T> ptrList = null!; //the objects we're shuffling along with the numbers given, if any
         private List<double> arr;
-        private int sizeOfHeap; //sizeOfHeap corresponds to indices. 1-indexed for real heap elements
+        private int sizeOfHeap; //sizeOfHeap corresponds to indices. 1-indexed
         private int sizeLimit; //none unless specified
         private T _prevObjRoot = default(T)!; //null for generics
 
-        public List<T> objMinMHeap { get => this.ptrList; }
-        public List<double> doubleMinHeap { get => this.arr; }
+        public List<T> objMaxMHeap { get => this.ptrList; }
+        public List<double> doubleMazHeap { get => this.arr; }
         public T prevObjRoot { get => this._prevObjRoot; } //when we pop the head out
         public int heapSize { get => this.sizeOfHeap; }
 
         // Create a constructor  
-        public MinHeap(int sizeLimit = 0)
+        public MaxHeap(int sizeLimit = 0)
         {
             //We are adding size+1, because array index 0 will be blank.  
             if (sizeLimit < 0)
                 sizeLimit = 0;
 
+            //We are adding size+1, because array index 0 will be blank.  
             this.arr = new List<double>(new double[sizeLimit + 1]);
             for (int idx = 1; idx < arr.Count; idx++)
                 arr[idx] = double.MaxValue;
@@ -50,7 +50,6 @@ namespace FortuneAlgo
             return sizeLimit > 0;
         }
 
-        //get top value of heap without deleting
         public double peekTopOfHeap()
         {
             if (heapSize == 0)
@@ -73,7 +72,7 @@ namespace FortuneAlgo
         /// <param name="key">
         /// the object we're trying to find given the key </param>
         /// <returns></returns>
-        public T grabObjGivenKeyVal(double key)
+        public T grabObjGivenKeyVal(double key) 
         {
             if (this.hasObjects())
             {
@@ -81,7 +80,7 @@ namespace FortuneAlgo
 
                 if (findIdx != -1)
                     Console.WriteLine($"Couldn't find object with key {key}");
-                return this.ptrList[findIdx];
+                    return this.ptrList[findIdx];
             }
             return default!;
         }
@@ -128,12 +127,11 @@ namespace FortuneAlgo
 
             if (sizeOfHeap < 0) //this means we freeed the tree at one point and have accessed it again.
             {
-                Console.WriteLine("MinHeap is empty");
+                Console.WriteLine("MaxHeap is empty");
                 return;
             }
 
-            //if the list is full, we don't want to insert anything
-            //unless it's lower than the root (this can change depending on use of heap) 
+            //if the list is full, we don't want to insert anything unless it's less than the root
             if (heapFull())
             {
                 if (value >= peekTopOfHeap())
@@ -149,16 +147,16 @@ namespace FortuneAlgo
             }
             else
             {
+                //Insertion of value inside the array happens at the last index of the  array, which is the heapSize. Should cover popping case
                 arr[sizeOfHeap + 1] = value;
                 ptrList[sizeOfHeap + 1] = obj;
             }
-
             sizeOfHeap++;
             HeapifyBottomToTop(sizeOfHeap);
             if (debug)
             {
                 Console.WriteLine("Inserted " + value + " successfully in Heap !");
-                printHeap();
+                printHeapEls();
             }
         }
 
@@ -171,8 +169,8 @@ namespace FortuneAlgo
             if (index <= 1)
                 return;
 
-            // If Current value is less than its parent, then we need to swap  
-            if (arr[index] < arr[parent])
+            // If Current value is greater than its parent, then we need to swap  
+            if (arr[index] > arr[parent])
             {
                 double tmp = arr[index];
                 arr[index] = arr[parent];
@@ -186,7 +184,7 @@ namespace FortuneAlgo
             return;
         }
 
-        //Extract Head of Heap
+        //general delete 10/06/22
         public double DeleteElementInHeap(double item, T obj = default!)
         {
             if (sizeOfHeap == 0)
@@ -207,7 +205,7 @@ namespace FortuneAlgo
             arr[delIdx] = arr[sizeOfHeap]; //Replacing with last element of the array  
             ptrList[delIdx] = ptrList[sizeOfHeap]; //Replacing with last element of the array  
 
-            arr[sizeOfHeap] = double.MaxValue;
+            arr[sizeOfHeap] = double.MinValue;
             ptrList[sizeOfHeap] = default(T)!; //just to highlight how we overwrote it... should never be reached since sizeOfHeap corresponds to indices
             sizeOfHeap--;
             HeapifyTopToBottom(delIdx);
@@ -215,12 +213,13 @@ namespace FortuneAlgo
             if (debug)
             {
                 Console.WriteLine("Successfully extracted value  from Heap.");
-                printHeap();
+                printHeapEls();
             }
 
             return delVal;
         }
 
+        //Extract Head of Heap  
         public double extractHeadOfHeap()
         {
             return DeleteElementInHeap(this.arr[1]);
@@ -231,7 +230,7 @@ namespace FortuneAlgo
         {
             int left = index * 2;
             int right = (index * 2) + 1;
-            int smallestChild = 0;
+            int largestChild = 0;
 
             //If there is no child of this node, then nothing to do. Just return.  
             if (sizeOfHeap < left)
@@ -241,7 +240,7 @@ namespace FortuneAlgo
             else if (sizeOfHeap == left)
             {
                 //If there is only a left child
-                if (arr[index] < arr[left]) //left nodes always less than right ones for both min/max heaps
+                if (arr[index] > arr[left]) //left nodes always less than right ones for both min/max heaps
                 {
                     double tmp = arr[index];
                     arr[index] = arr[left];
@@ -255,24 +254,24 @@ namespace FortuneAlgo
                 return;
             }
             else
-            { //If both children are there, find smallest child
-                if (arr[left] < arr[right])
-                    smallestChild = left;
+            { //If both children are there, find largest child
+                if (arr[left] > arr[right])
+                    largestChild = left;
                 else
-                    smallestChild = right;
+                    largestChild = right;
 
-                if (arr[index] > arr[smallestChild])
+                if (arr[index] < arr[largestChild])
                 { //If Parent is greater than smallest child, then swap  
                     double tmp = arr[index];
-                    arr[index] = arr[smallestChild];
-                    arr[smallestChild] = tmp;
+                    arr[index] = arr[largestChild];
+                    arr[largestChild] = tmp;
 
                     //ditto for the objects we're shuffling
                     if (ptrList != null)
-                        swapObjs(index, smallestChild);
+                        swapObjs(index, largestChild);
                 }
             }
-            HeapifyTopToBottom(smallestChild);
+            HeapifyTopToBottom(largestChild);
             return;
         }
 
@@ -282,14 +281,9 @@ namespace FortuneAlgo
             if (debug)
                 Console.WriteLine("Deleting heap...");
 
-            if (this.hasObjects())
-                this.ptrList.Clear();
-
             this.sizeOfHeap = -1;
-            this.sizeLimit = -1;
-            this.ptrList = null;
-            this.arr.Clear();
-            this.arr = null;
+            this.ptrList = null!;
+            this.arr = null!;
             this._prevObjRoot = default(T)!;
         }
 
@@ -297,9 +291,9 @@ namespace FortuneAlgo
         public void printHeapEls()
         {
             if (this.heapEmpty())
-                Console.WriteLine("\nMinHeap is empty");
+                Console.WriteLine("\nMaxHeap is empty");
 
-            Console.WriteLine("Printing all the elements of this Heap...");// Printing from 1 because 0th cell is dummy  
+            Console.WriteLine("Printing all the elements of this MaxHeap...");// Printing from 1 because 0th cell is dummy  
 
             for (int i = 1; i <= sizeOfHeap; i++)
                 Console.WriteLine(arr[i] + " ");
@@ -326,7 +320,7 @@ namespace FortuneAlgo
         public void printHeap()
         {
             if (this.heapEmpty())
-                Console.WriteLine("\nMinHeap is empty");
+                Console.WriteLine("\nMaxHeap is empty");
 
             int leftNode = 1;
             int rightNode = 2;
@@ -334,7 +328,7 @@ namespace FortuneAlgo
             //print level by level.. There are 2^n elements in a n-level tree.
             while (leftNode <= sizeOfHeap)
             {
-                Console.Write($"\nMinHeap Level {level + 1} :");
+                Console.Write($"\nMaxHeap Level {level + 1} :");
                 for (int i = leftNode; i < rightNode; i++)
                 {
                     if (i <= sizeOfHeap)
@@ -373,90 +367,53 @@ namespace FortuneAlgo
             Console.WriteLine("\n");
             return;
         }
+
+        /*
+        //testing for max heap
+        public static void testHeap()
+        {
+            MaxHeap<int> intHeap = new MaxHeap<int>(20);
+            for (int i = 0; i < 100; i++)
+                intHeap.InsertElementInHeap(i, i);
+
+
+            Console.WriteLine("First Heap :");
+            intHeap.printHeapEls();
+            Console.WriteLine("Deleting heap...");
+            intHeap.deleteHeap();
+
+            intHeap = new MaxHeap<int>(20);
+
+            for (int i = 100; i >= 0; i--)
+                intHeap.InsertElementInHeap(i, i);
+
+            Console.WriteLine("Second Heap :");
+            intHeap.printHeapEls();
+            Console.WriteLine("Deleting heap...");
+            intHeap.deleteHeap();
+
+
+            // Custom inputs
+            intHeap = new MaxHeap<int>(9);
+            intHeap.InsertElementInHeap(5, 5);
+            intHeap.InsertElementInHeap(3, 3);
+            intHeap.InsertElementInHeap(17, 17);
+            intHeap.InsertElementInHeap(10, 10);
+            intHeap.InsertElementInHeap(84, 84);
+            intHeap.InsertElementInHeap(19, 19);
+            intHeap.InsertElementInHeap(6, 6);
+            intHeap.InsertElementInHeap(22, 22);
+            intHeap.InsertElementInHeap(9, 9);
+
+            intHeap.InsertElementInHeap(78, 78);
+            intHeap.InsertElementInHeap(210, 210);
+
+            Console.WriteLine(" GFG Test:");
+
+            intHeap.printHeapEls();
+            Console.WriteLine("Deleting heap...");
+            intHeap.deleteHeap();
+        }
+        */
     }
 }
-/*testing for max heap
-static void Main()
-{
-    MinHeap<int> intHeap = new MinHeap<int>();
-    for (int i = 0; i < 100; i++)
-        intHeap.InsertElementInHeap(i, i);
-
-
-    Console.WriteLine("First Heap :");
-    intHeap.printHeapEls();
-    Console.WriteLine("Deleting heap...");
-    intHeap.deleteHeap();
-
-    intHeap = new MinHeap<int>(20);
-
-    for (int i = 100; i >= 0; i--)
-        intHeap.InsertElementInHeap(i, i);
-
-    Console.WriteLine("Second Heap :");
-    intHeap.printHeapEls();
-    Console.WriteLine("Deleting heap...");
-    intHeap.deleteHeap();
-
-
-    // Custom inputs
-    intHeap = new MinHeap<int>(9);
-    intHeap.InsertElementInHeap(5, 5);
-    intHeap.InsertElementInHeap(3, 3);
-    intHeap.InsertElementInHeap(17, 17);
-    intHeap.InsertElementInHeap(10, 10);
-    intHeap.InsertElementInHeap(84, 84);
-    intHeap.InsertElementInHeap(19, 19);
-    intHeap.InsertElementInHeap(6, 6);
-    intHeap.InsertElementInHeap(22, 22);
-    intHeap.InsertElementInHeap(9, 9);
-
-    intHeap.InsertElementInHeap(78, 78);
-    intHeap.InsertElementInHeap(210, 210);
-
-    Console.WriteLine(" GFG Test:");
-
-    intHeap.printHeapEls();
-    Console.WriteLine("Deleting heap...");
-    intHeap.deleteHeap();
-
-}*/
-
-/* old extractHeadofHeap
-public double extractHeadOfHeap()
-{
-if (sizeOfHeap == 0)
-{
-    Console.WriteLine("Heap is empty !");
-    return -1;
-}
-
-if (debug)
-{
-    Console.WriteLine("Head of the Heap is: " + arr[1]);
-    Console.WriteLine("Extracting it now...");
-}
-
-double extractedValue = arr[1];
-_prevObjRoot = ptrList[1];
-arr[1] = arr[sizeOfHeap]; //Replacing with last element of the array  
-ptrList[1] = ptrList[sizeOfHeap]; //Replacing with last element of the array  
-
-arr[sizeOfHeap] = double.MaxValue;
-ptrList[sizeOfHeap] = default(T)!; //just to highlight how we overwrote it... should never be reached since sizeOfHeap corresponds to indices
-sizeOfHeap--;
-HeapifyTopToBottom(1);
-
-if (debug)
-{
-    Console.WriteLine("Successfully extracted value from Heap.");
-    printHeapEls();
-}
-
-return extractedValue;
-//return DeleteElementInHeap(this.arr[0]);
-}
- */
-
-
-

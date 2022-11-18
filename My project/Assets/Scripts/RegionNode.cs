@@ -4,10 +4,13 @@
         Can be a site and its space or a parabola w a focus and directrix (sweepline)
  due: Thursday 11/29
 */
+using FortuneAlgo;
 using System.Numerics;
 using System.Linq;
 using System;
+using System.Text;
 using System.Collections.Generic;
+
 namespace FortuneAlgo
 {
     // open to expansion later on. 
