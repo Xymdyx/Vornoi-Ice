@@ -31,6 +31,8 @@ using System.Text;
 //https://www.boost.org/doc/libs/1_80_0/boost/polygon/voronoi_builder.hpp
 // https://www.emathhelp.net/calculators/algebra-2/parabola-calculator/ -- parabola resources
 // parabola calculator: https://www.omnicalculator.com/math/parabola
+// geogebra intersection tool: https://www.geogebra.org/m/bduwwjqn
+// circumcente calculator: https://www.omnicalculator.com/math/circumcenter-of-a-triangle
 // section header:
 
 /*------------------------------- SECTION HEADER -------------------------------*/
@@ -65,7 +67,7 @@ namespace FortuneAlgo
         public VoronoiDiagram _vd;
 
 
-        /*------------------------------- CONSTRUCTOR -------------------------------*/
+        /*------------------------------- CONSTRUCTORS -------------------------------*/
         public FortuneTracer(List<Vector2> sites, BBox bbox)
         {
             this._sites = sites;
@@ -78,6 +80,17 @@ namespace FortuneAlgo
             this._vd = null!;
         }
 
+        public FortuneTracer()
+        {
+            this._sites = null!;
+            this._siteCount = 0;
+            //given as lowerLeft and upperRight corners
+            //of 2d face of VoronoiObj in Unity. Bounds Voronoi Diagram
+            this._bbox = null!;
+            this._pq = null!;
+            this._beachLine = null!;
+            this._vd = null!;
+        }
 
         /*------------------------------- UTIL METHODS -------------------------------*/
         /*
@@ -170,8 +183,8 @@ namespace FortuneAlgo
             float s2Scale = s2.X * s2.X + s2.Y * s2.Y;
             float s3Scale = s3.X * s3.X + s3.Y * s3.Y;
 
-            // D = 2 * |Ax * (By - Cy) + Bx * (Cy - Ay) + Cx * (Ay - By)|
-            float d = 2 * Math.Abs(s1.X * (s2.Y - s3.Y) + s2.X * (s3.Y - s1.Y) + s3.X * (s1.Y - s2.Y));
+            // D = 2 * [Ax * (By - Cy) + Bx * (Cy - Ay) + Cx * (Ay - By)]
+            float d = 2 * (s1.X * (s2.Y - s3.Y) + s2.X * (s3.Y - s1.Y) + s3.X * (s1.Y - s2.Y));
             //Cart Coords of CC Ux = [(Ax^2 + Ay^2) * (By - Cy) + (Bx^2 + By^2) * (Cy - Ay) + (Cx^2 + Cy^2) * (Ay - By)] / D
             float Ux = (s1Scale * (s2.Y - s3.Y) + s2Scale * (s3.Y - s1.Y) + s3Scale * (s1.Y - s2.Y)) / d;
             //Cart Coords of CC Uy = [(Ax^2 + Ay^2) * (Cx - Bx) + (Bx^2 + By^2) * (Ax - Cx) + (Cx^2 + Cy^2) * (Bx - Ax)] / D
@@ -785,4 +798,59 @@ namespace FortuneAlgo
 * https://www.emathzone.com/tutorials/geometry/equation-of-a-circle-given-two-points-and-tangent-line.html - 2 methods
 * https://www.youtube.com/watch?v=nRAT0cyp74o -- via distance. These are great if the line has 1 perpendicular line...
 * https://www.youtube.com/watch?v=DsaYcD_Ab9I&t=194s -- circle touches a line. Doesn't work for sweepline
+ */
+
+/*
+ * TEST SUITE FOR CIRCUMCENTER CALCULATION
+ static void runCCTest(Vector2 s1, Vector2 s2, Vector2 s3, FortuneTracer ft) 
+{
+    Vector2 ccResult = ft.getCircumCenter(s1, s2, s3);
+    Console.WriteLine($"CC of {s1}, {s2}, {s3}: {ccResult}");
+}
+
+static void runAllCCTests(Vector2 s1, Vector2 s2, Vector2 s3, FortuneTracer ft)
+{
+    Console.WriteLine();
+    runCCTest(s1, s2, s3, ft);
+    runCCTest(s1, s3, s2, ft);
+    runCCTest(s2, s1, s3, ft);
+    runCCTest(s2, s3, s1, ft);
+    runCCTest(s3, s1, s2, ft);
+    runCCTest(s3, s2, s1, ft);
+}
+
+static void testCC()
+{
+    // test circumcenter of FortuneTracer
+    //CASE 1.. test all combos
+    FortuneTracer fortune = new();
+    Vector2 s1 = new(3, 2);
+    Vector2 s2 = new(1, 4);
+    Vector2 s3 = new(5, 4);
+    runAllCCTests(s1, s2, s3, fortune);
+
+    //CASE 2.. right triangle
+    s1 = new(0, 5); s2 = new(0, 0); s3 = new(5, 0);
+    runAllCCTests(s1, s2, s3, fortune);
+
+    // Case 3
+    s1 = new(2, -3); s2 = new(8, -2); s3 = new(8, 6);
+    runAllCCTests(s1, s2, s3, fortune);
+
+    // Case 4
+    s1 = new(4, 5); s2 = new(6, 5); s3 = new(3, 2);
+    runAllCCTests(s1, s2, s3, fortune);
+
+    // Case 5
+    s1 = new(-7, 1); s2 = new(-5, 5); s3 = new(-1, 3);
+    runAllCCTests(s1, s2, s3, fortune);
+
+    // Case 6
+    s1 = new(3, 5); s2 = new(4, -1); s3 = new(-4, 1);
+    runAllCCTests(s1, s2, s3, fortune);
+
+    // Case 7
+    s1 = new(-4, 2); s2 = new(2, 4); s3 = new(4, -4);
+    runAllCCTests(s1, s2, s3, fortune);
+}
  */
