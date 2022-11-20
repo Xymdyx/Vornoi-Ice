@@ -33,6 +33,7 @@ using System.Text;
 // parabola calculator: https://www.omnicalculator.com/math/parabola
 // geogebra intersection tool: https://www.geogebra.org/m/bduwwjqn
 // circumcente calculator: https://www.omnicalculator.com/math/circumcenter-of-a-triangle
+
 // section header:
 
 /*------------------------------- SECTION HEADER -------------------------------*/
@@ -43,12 +44,6 @@ using System.Text;
  */
 //SWEEP-AXIS-MOVE-DEPENDENT//
 
-
-/*
- * CONCERNS
- * 11/4.... So the Ethereality DCEL seems great for constructing one givens segments but less so for building
- * one from scratch consider this simpler one: https://searchcode.com/codesearch/view/49254163/
- */
 namespace FortuneAlgo
 {
     public class FortuneTracer
@@ -147,18 +142,18 @@ namespace FortuneAlgo
             // given y =  a1x^2 + b1x + c1, y =  a2x^2 + b2^x + c2
             // solve (a1 - a2)x^2 + (b1 - b2)y + (c1 - c2)
             // solve quad formula
-
             float a = s2.Y - s1.Y;
-            float b = 2 * (s2.X * (s1.Y - sweepCoord) - s1.X * (s2.Y - sweepCoord));
+            float b = 2 * (s2.X * (s1.Y - sweepCoord) - (s1.X * (s2.Y - sweepCoord)));
             float c = (s1.X * s1.X * (s2.Y - sweepCoord)) - (s2.X * s2.X)
-                * (s1.Y - sweepCoord) + (s1.Y - s2.Y) * (s1.Y - sweepCoord) * (s2.Y - sweepCoord);
+                * (s1.Y - sweepCoord) + ((s1.Y - s2.Y) * (s1.Y - sweepCoord) * (s2.Y - sweepCoord));
 
             // if a=0, quadratic formula does not apply
             if (Math.Abs(a) < _toleranceThreshold)
                 return -c / b;
 
-            float x1 = (-b + (float)Math.Sqrt(b * b - (4 * a * c))) / (2 * a);
-            float x2 = (-b - (float)Math.Sqrt(b * b - (4 * a * c))) / (2 * a);
+            float det = (float)Math.Sqrt(b * b - (4 * a * c));
+            float x1 = (-b + det) / (2 * a);
+            float x2 = (-b - det) / (2 * a);
 
             if (s1.X < x1 && x1 < s2.X)
                 return x1;
@@ -356,9 +351,11 @@ namespace FortuneAlgo
 		* and another where pi.x >= pj.x
 		* only called when there is at least one arc in the beachline since we get at most 2n-1 arcs...
 		*/
-        private RBNode<RegionNode> insertAndSplit(Vector2 piSite, MaxHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach, DCEL voronoiDCEL)
+        private RBNode<RegionNode> insertAndSplit(Vector2 piSite, MaxHeap<VoronoiEvent> eventQueue,
+                RedBlackTree<RegionNode> beach, DCEL voronoiDCEL, RBNode<RegionNode> targetNode = null!)
         {
-            RBNode<RegionNode> pjNode = findArcAboveSite(piSite, beach);
+            RBNode<RegionNode> pjNode = (targetNode != null) ? targetNode : findArcAboveSite(piSite, beach);
+
             RegionNode piNode = null!;
             RegionNode pjArc = pjNode.obj;
             Vector2 pjSite = pjArc.regionSites[0];
@@ -383,10 +380,9 @@ namespace FortuneAlgo
                 levelDivisor += 1;
             }
 
-            // TODO...inserting left->right per level seems to minimize rotation...10/29
+            // inserting left->right per level seems to minimize rotation...10/29
             // however, the longevity of this insertion pattern is dubious..
             // Try average as values for inner leaf nodes. Maybe used the height of returned node for divisor...
-
             // 11/16 -- INSERT THE BREAKPT NODE FIRST so it can become an internal rather than a leaf...
             // ... verified 11/17.. prepare to test
             if (piSite.X < pjSite.X)
@@ -445,13 +441,35 @@ namespace FortuneAlgo
 
 
         /*------------------------------- CIRCLE EVENT METHODS -------------------------------*/
-        //removes an arc as described in handleCircleEvent.
-        private void removeArc(float sweepCoord, MaxHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach)
-		{
-			//TODO
-			return;
-		}
 
+        /// <summary>
+        /// private helper function for handleCircleEvent
+        /// that sets the halfedge pointers appropriately
+        /// left halfedges come from starting breakpt
+        /// right halfedges end at the voronoi vertex
+        /// </summary>
+        private void setCircleHEPtrs(HalfEdge parentHE, HalfEdge upParentHE, HalfEdge newLeftHE, HalfEdge newRightHE)
+        {
+            // grab the left halfedges of each then we know their twins are the right halfedges
+            HalfEdge parentLeftHE = (parentHE.Origin != newLeftHE.Origin) ? parentHE : parentHE.Twin;
+            HalfEdge upParentLeftHE = (upParentHE.Origin != newLeftHE.Origin) ? upParentHE : parentHE.Twin;
+
+            // determine leftmost left HE then we get the rest
+            HalfEdge leftLeftHE = (parentLeftHE.Origin.Position.X <= upParentLeftHE.Origin.Position.X) ? parentLeftHE : upParentLeftHE;
+            HalfEdge rightLeftHE = (parentLeftHE == leftLeftHE) ? upParentLeftHE : parentLeftHE;
+            HalfEdge leftRightHE = leftLeftHE.Twin;
+            HalfEdge rightRightHE = rightLeftHE.Twin;
+
+            // set prevs and nexts so we define faces in CCW fashion
+            leftLeftHE.Next = rightRightHE;
+            rightRightHE.Prev = leftLeftHE;
+            leftRightHE.Prev = newRightHE;
+            newRightHE.Next = leftRightHE;
+            newLeftHE.Prev = rightLeftHE;
+            rightLeftHE.Next = newLeftHE;
+
+            return;
+        }
 
         /*------------------------------- HANDLE EVENT METHODS -------------------------------*/
 
@@ -464,7 +482,6 @@ namespace FortuneAlgo
         /// <param name="voronoiDCEL"></param>
         public void handleSiteEvent(float sweepCoord, MaxHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach, DCEL voronoiDCEL)
 		{
-			//TODO
 			/*
 			1. if T empty, insert arc immediately, else continue.
 			
@@ -514,34 +531,6 @@ namespace FortuneAlgo
 			}
 			return;
 		}
-		/// <summary>
-        /// private helper function for handleCircleEvent
-        /// that sets the halfedge pointers appropriately
-        /// left halfedges come from starting breakpt
-        /// right halfedges end at the voronoi vertex
-        /// </summary>
-        private void setCircleHEPtrs(HalfEdge parentHE, HalfEdge upParentHE, HalfEdge newLeftHE, HalfEdge newRightHE) 
-        {
-            // grab the left halfedges of each then we know their twins are the right halfedges
-            HalfEdge parentLeftHE = (parentHE.Origin != newLeftHE.Origin) ? parentHE : parentHE.Twin;
-            HalfEdge upParentLeftHE = (upParentHE.Origin != newLeftHE.Origin) ? upParentHE : parentHE.Twin;
-
-            // determine leftmost left HE then we get the rest
-            HalfEdge leftLeftHE = (parentLeftHE.Origin.Position.X <= upParentLeftHE.Origin.Position.X) ? parentLeftHE : upParentLeftHE;
-            HalfEdge rightLeftHE = (parentLeftHE == leftLeftHE) ? upParentLeftHE : parentLeftHE;
-            HalfEdge leftRightHE = leftLeftHE.Twin;
-            HalfEdge rightRightHE = rightLeftHE.Twin;
-
-            // set prevs and nexts so we define faces in CCW fashion
-            leftLeftHE.Next = rightRightHE;
-            rightRightHE.Prev = leftLeftHE;
-            leftRightHE.Prev = newRightHE;
-            newRightHE.Next = leftRightHE;
-            newLeftHE.Prev = rightLeftHE;
-            rightLeftHE.Next = newLeftHE;
-
-            return;
-        }
 
 		/* 
 		 * handle valid circle event. 
@@ -598,7 +587,6 @@ namespace FortuneAlgo
             // the triple of consecutive sites
             // pi,pj,pk on the sweep-line status is replaced with pi,pk
 
-            // TODO 11/4. Clip DCEL half edges...by replacing infinite halfedges with circle center
 			// 2. update the parent, DO NOT DELETE.            
             if (squeezedParent != null)
             {
@@ -661,7 +649,6 @@ namespace FortuneAlgo
 			 from predecessor and successor of y in T (circle event w a as middle is being handled in this method)
             */
 
-            //TODO
             /*2. Add center of circle causing the event as a vertex record to the DCEL d storing the VD. Make 2 half-edges
 				corresponding to new breakpt of the beachline. Set ptrs between them appropriately. Attach 3 new records
 				to half-edge records that end at the vertex.*/
@@ -785,8 +772,6 @@ namespace FortuneAlgo
             RedBlackTree<RegionNode> beach = initBeachSO();
             // 11/18...TO TEST
             // test insert and split
-            // test getBreakPtX()
-            // test getCircumCenter()
             // test
             //vorDiagram = fortuneAlgo(eventQueue, beach);
             return;
@@ -798,59 +783,4 @@ namespace FortuneAlgo
 * https://www.emathzone.com/tutorials/geometry/equation-of-a-circle-given-two-points-and-tangent-line.html - 2 methods
 * https://www.youtube.com/watch?v=nRAT0cyp74o -- via distance. These are great if the line has 1 perpendicular line...
 * https://www.youtube.com/watch?v=DsaYcD_Ab9I&t=194s -- circle touches a line. Doesn't work for sweepline
- */
-
-/*
- * TEST SUITE FOR CIRCUMCENTER CALCULATION
- static void runCCTest(Vector2 s1, Vector2 s2, Vector2 s3, FortuneTracer ft) 
-{
-    Vector2 ccResult = ft.getCircumCenter(s1, s2, s3);
-    Console.WriteLine($"CC of {s1}, {s2}, {s3}: {ccResult}");
-}
-
-static void runAllCCTests(Vector2 s1, Vector2 s2, Vector2 s3, FortuneTracer ft)
-{
-    Console.WriteLine();
-    runCCTest(s1, s2, s3, ft);
-    runCCTest(s1, s3, s2, ft);
-    runCCTest(s2, s1, s3, ft);
-    runCCTest(s2, s3, s1, ft);
-    runCCTest(s3, s1, s2, ft);
-    runCCTest(s3, s2, s1, ft);
-}
-
-static void testCC()
-{
-    // test circumcenter of FortuneTracer
-    //CASE 1.. test all combos
-    FortuneTracer fortune = new();
-    Vector2 s1 = new(3, 2);
-    Vector2 s2 = new(1, 4);
-    Vector2 s3 = new(5, 4);
-    runAllCCTests(s1, s2, s3, fortune);
-
-    //CASE 2.. right triangle
-    s1 = new(0, 5); s2 = new(0, 0); s3 = new(5, 0);
-    runAllCCTests(s1, s2, s3, fortune);
-
-    // Case 3
-    s1 = new(2, -3); s2 = new(8, -2); s3 = new(8, 6);
-    runAllCCTests(s1, s2, s3, fortune);
-
-    // Case 4
-    s1 = new(4, 5); s2 = new(6, 5); s3 = new(3, 2);
-    runAllCCTests(s1, s2, s3, fortune);
-
-    // Case 5
-    s1 = new(-7, 1); s2 = new(-5, 5); s3 = new(-1, 3);
-    runAllCCTests(s1, s2, s3, fortune);
-
-    // Case 6
-    s1 = new(3, 5); s2 = new(4, -1); s3 = new(-4, 1);
-    runAllCCTests(s1, s2, s3, fortune);
-
-    // Case 7
-    s1 = new(-4, 2); s2 = new(2, 4); s3 = new(4, -4);
-    runAllCCTests(s1, s2, s3, fortune);
-}
  */

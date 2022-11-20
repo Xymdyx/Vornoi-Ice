@@ -1,0 +1,351 @@
+// See https://aka.ms/new-console-template for more information
+using FortuneAlgo;
+using System.Numerics;
+
+static void testRBT() 
+{
+    Console.WriteLine("RBT Test 1");
+    RedBlackTree<float> testRBT = new RedBlackTree<float>();
+    testRBT.insert(10);
+    testRBT.delete(10);
+    testRBT.insert(10);
+    testRBT.insert(20);
+    testRBT.insert(30);
+    testRBT.insert(70);
+    testRBT.insert(5);
+    testRBT.insert(20);
+    testRBT.insert(71);
+
+    testRBT._printRBT();
+    testRBT.delete(71);
+    testRBT.delete(30);
+    Console.WriteLine("After deletion:");
+    testRBT._printRBT();
+    testRBT.inOrderPrint(testRBT.root);
+    testRBT.clearRBT();
+
+    Console.WriteLine("\nRBT Test 2");
+    testRBT.insert(55);
+    testRBT.insert(40);
+    testRBT.insert(65);
+    testRBT.insert(60);
+    testRBT.insert(75);
+    testRBT.insert(57);
+    testRBT._printRBT();
+    Console.WriteLine("After deletion:");
+    testRBT.delete(57);
+    testRBT._printRBT();
+    testRBT.clearRBT();
+    testRBT._printRBT();
+
+    Console.WriteLine("\nRBT Test 3");
+    for (int i = 1; i < 17; i++)
+        testRBT.insert(i);
+
+    testRBT.insert(31);
+    testRBT.insert(0);
+    testRBT.insert(32);
+    testRBT._printRBT();
+    testRBT.clearRBT();
+    testRBT._printRBT();
+
+    Console.WriteLine("\nRBT Test 4");
+    testRBT.insert(10);
+    testRBT.insert(10);
+    testRBT.insert(10);
+    testRBT.insert(10);
+    testRBT.insert(20);
+    RBNode<float> tNode = testRBT.find(10);
+    RBNode<float> tSucc = testRBT.getSucc(tNode);
+    Console.WriteLine($"{tNode.key} succ: {tSucc.key}");
+    testRBT.clearRBT();
+}
+
+static void testMinHeap() 
+{
+    //Min Heap now
+    MinHeap<int> minIntHeap = new MinHeap<int>();
+    for (int i = 0; i < 100; i++)
+        minIntHeap.InsertElementInHeap(i, i);
+
+
+    Console.WriteLine("First Heap :");
+    minIntHeap.printHeap();
+    Console.WriteLine("Deleting heap...");
+    minIntHeap.deleteHeap();
+
+    minIntHeap = new MinHeap<int>(20);
+
+    for (int i = 100; i >= 0; i--)
+        minIntHeap.InsertElementInHeap(i, i);
+
+    Console.WriteLine("Second Heap :");
+    minIntHeap.printHeap();
+    Console.WriteLine("Deleting heap...");
+    minIntHeap.deleteHeap();
+
+
+    // Custom inputs
+    minIntHeap = new MinHeap<int>(9);
+    minIntHeap.InsertElementInHeap(5, 5);
+    minIntHeap.InsertElementInHeap(3, 3);
+    minIntHeap.InsertElementInHeap(17, 17);
+    minIntHeap.InsertElementInHeap(10, 10);
+    minIntHeap.InsertElementInHeap(84, 84);
+    minIntHeap.InsertElementInHeap(19, 19);
+    minIntHeap.InsertElementInHeap(6, 6);
+    minIntHeap.InsertElementInHeap(22, 22);
+    minIntHeap.InsertElementInHeap(9, 9);
+
+    minIntHeap.InsertElementInHeap(78, 78);
+    minIntHeap.InsertElementInHeap(210, 210);
+
+    Console.WriteLine(" GFG Test:");
+
+    minIntHeap.printHeap();
+    Console.WriteLine("Deleting heap...");
+    minIntHeap.deleteHeap();
+}
+
+static void testMaxHeap() 
+{
+    //Max Heap Testing
+    Console.WriteLine("\n\n\n");
+    MaxHeap<int> maxIntHeap = new MaxHeap<int>();
+    for (int i = 0; i < 100; i++)
+        maxIntHeap.InsertElementInHeap(i, i);
+
+
+    Console.WriteLine("First Heap :");
+    maxIntHeap.printHeap();
+    Console.WriteLine("Deleting heap...");
+    maxIntHeap.deleteHeap();
+
+    maxIntHeap = new MaxHeap<int>(20);
+
+    for (int i = 100; i >= 0; i--)
+        maxIntHeap.InsertElementInHeap(i, i);
+
+    Console.WriteLine("Second Heap :");
+    maxIntHeap.printHeap();
+    Console.WriteLine("Deleting heap...");
+    maxIntHeap.deleteHeap();
+
+
+    // Custom inputs
+    maxIntHeap = new MaxHeap<int>(9);
+    maxIntHeap.InsertElementInHeap(5, 5);
+    maxIntHeap.InsertElementInHeap(3, 3);
+    maxIntHeap.InsertElementInHeap(17, 17);
+    maxIntHeap.InsertElementInHeap(10, 10);
+    maxIntHeap.InsertElementInHeap(84, 84);
+    maxIntHeap.InsertElementInHeap(19, 19);
+    maxIntHeap.InsertElementInHeap(6, 6);
+    maxIntHeap.InsertElementInHeap(22, 22);
+    maxIntHeap.InsertElementInHeap(9, 9);
+
+    maxIntHeap.InsertElementInHeap(78, 78);
+    maxIntHeap.InsertElementInHeap(210, 210);
+
+    Console.WriteLine("GFG Test:");
+
+    maxIntHeap.printHeap();
+    Console.WriteLine("\nExtracting root of maxHeap");
+    maxIntHeap.extractHeadOfHeap();
+    maxIntHeap.printHeap();
+    Console.WriteLine("Deleting heap...");
+    maxIntHeap.deleteHeap();
+}
+
+static void runCCTest(Vector2 s1, Vector2 s2, Vector2 s3, FortuneTracer ft)
+{
+    Vector2 ccResult = ft.getCircumCenter(s1, s2, s3);
+    Console.WriteLine($"CC of {s1}, {s2}, {s3}: {ccResult}");
+}
+
+static void runAllCCTests(Vector2 s1, Vector2 s2, Vector2 s3, FortuneTracer ft)
+{
+    Console.WriteLine();
+    runCCTest(s1, s2, s3, ft);
+    runCCTest(s1, s3, s2, ft);
+    runCCTest(s2, s1, s3, ft);
+    runCCTest(s2, s3, s1, ft);
+    runCCTest(s3, s1, s2, ft);
+    runCCTest(s3, s2, s1, ft);
+    Console.WriteLine();
+}
+
+static void testCC()
+{
+    // test circumcenter of FortuneTracer
+    //CASE 1.. test all combos
+    FortuneTracer fortune = new();
+    Vector2 s1 = new(3, 2);
+    Vector2 s2 = new(1, 4);
+    Vector2 s3 = new(5, 4);
+    runAllCCTests(s1, s2, s3, fortune);
+
+    //CASE 2.. right triangle
+    s1 = new(0, 5); s2 = new(0, 0); s3 = new(5, 0);
+    runAllCCTests(s1, s2, s3, fortune);
+
+    // Case 3
+    s1 = new(2, -3); s2 = new(8, -2); s3 = new(8, 6);
+    runAllCCTests(s1, s2, s3, fortune);
+
+    // Case 4
+    s1 = new(4, 5); s2 = new(6, 5); s3 = new(3, 2);
+    runAllCCTests(s1, s2, s3, fortune);
+
+    // Case 5
+    s1 = new(-7, 1); s2 = new(-5, 5); s3 = new(-1, 3);
+    runAllCCTests(s1, s2, s3, fortune);
+
+    // Case 6
+    s1 = new(3, 5); s2 = new(4, -1); s3 = new(-4, 1);
+    runAllCCTests(s1, s2, s3, fortune);
+
+    // Case 7
+    s1 = new(-4, 2); s2 = new(2, 4); s3 = new(4, -4);
+    runAllCCTests(s1, s2, s3, fortune);
+}
+
+static float altBreakPtX1(Vector2 s1, Vector2 s2, float sweepCoord)
+{
+    float _toleranceThreshold = 1e-5f;
+
+    float a = (s2.Y - s1.Y) / 2.0f;
+    float b = ((s2.X) * (s1.Y - sweepCoord)) - ((s1.X) * (s2.Y - sweepCoord));
+    float c = ((s1.Y * s1.Y * s2.Y) - (s2.Y * sweepCoord * sweepCoord) - (s1.Y * s1.Y * sweepCoord) - (s2.Y * s2.Y * s1.Y)
+            + (s1.Y * sweepCoord * sweepCoord) + (s2.Y * s2.Y * sweepCoord) + (s2.Y * s1.X * s1.X) - (sweepCoord * s1.X * s1.X)
+            - (s1.Y * s2.X * s2.X) + (sweepCoord * s2.X * s2.X)) / 2.0f;
+
+    // if a=0, quadratic formula does not apply
+    if (Math.Abs(a) < _toleranceThreshold)
+        return -c / b;
+
+    float det = (float)Math.Sqrt(b * b - (4 * a * c));
+    float x1 = (-b + det) / (2 * a);
+    float x2 = (-b - det) / (2 * a);
+
+    if (s1.X < x1 && x1 < s2.X)
+        return x1;
+
+    return x2;
+}
+
+static float altBreakPtX2(Vector2 s1, Vector2 s2, float sweepCoord)
+{
+    float _toleranceThreshold = 1e-5f;
+
+    float dp = 2.0f * (s1.Y - sweepCoord);
+    float a1 = 1.0f / dp;
+    float b1 = (-2.0f * s1.X) / dp;
+    float c1 = sweepCoord + dp / 4 + s1.X * s1.X / dp;
+
+    dp = 2.0f * (s2.Y - sweepCoord);
+    float a2 = 1.0f / dp;
+    float b2 = (-2.0f * s2.X) / dp;
+    float c2 = sweepCoord + dp / 4 + s2.X * s2.X / dp;
+
+    float a = a1 - a2;
+    float b = b1 - b2;
+    float c = c1 - c2;
+
+    // if a=0, quadratic formula does not apply
+    if (Math.Abs(a) < _toleranceThreshold)
+        return -c / b;
+
+    float det = (float)Math.Sqrt(b * b - (4 * a * c));
+    float x1 = (-b + det) / (2 * a);
+    float x2 = (-b - det) / (2 * a);
+
+    if (s1.X < x1 && x1 < s2.X)
+        return x1;
+
+    return x2;
+}
+
+static void runGetBreakPtXTest(Vector2 f1, Vector2 f2, float directrix, FortuneTracer ft)
+{
+    float xInt = ft.getBreakPtX(f1, f2, directrix);
+    Console.WriteLine($"FT X intersection at y-coord {directrix} of parab w focus: {f1} and parab w focus {f2} is {xInt}");
+    xInt = altBreakPtX1(f1, f2, directrix);
+    Console.WriteLine($"Alt1 X intersection at y-coord {directrix} of parab w focus: {f1} and parab w focus {f2} is {xInt}");
+    xInt = altBreakPtX2(f1, f2, directrix);
+    Console.WriteLine($"Alt2 X intersection at y-coord {directrix} of parab w focus: {f1} and parab w focus {f2} is {xInt}");
+    Console.WriteLine();
+}
+
+static void testGetBreakPtX()
+{
+    // test 1 w y = x^2 and y = (x^2/.55) -1.5
+    FortuneTracer ft = new();
+    Vector2 f1 = new(0, 0);
+    Vector2 f2 = new(0, -1.363f);
+    float yDirectrix = -1.637f;
+    runGetBreakPtXTest(f1, f2, yDirectrix, ft);
+    runGetBreakPtXTest(f2, f1, yDirectrix, ft);
+
+    // test 2 w y = x^2 and y = (x^2 -5x + 5.61) / 2.57
+    f2 = new(2.5f, .3935f);
+    yDirectrix = -.8916f;
+    runGetBreakPtXTest(f1, f2, yDirectrix, ft);
+    runGetBreakPtXTest(f2, f1, yDirectrix, ft);
+
+    // test 3 w y = x^2 and y = (10/7) * (x + 1.5)^2
+    f2 = new(-1.5f, .175f);
+    yDirectrix = -.175f;
+    runGetBreakPtXTest(f1, f2, yDirectrix, ft);
+    runGetBreakPtXTest(f2, f1, yDirectrix, ft);
+
+    // test 4 w y = x^2 and y = (x^2 - 4x + 4) /1.45 
+    f2 = new(2f, .3625f);
+    yDirectrix = -.3625f;
+    runGetBreakPtXTest(f1, f2, yDirectrix, ft);
+    runGetBreakPtXTest(f2, f1, yDirectrix, ft);
+
+    // test 5 w y = x^2 and y = (x - 1.5)^2  /2 
+    f2 = new(1.5f, .5f);
+    yDirectrix = -.5f;
+    runGetBreakPtXTest(f1, f2, yDirectrix, ft);
+    runGetBreakPtXTest(f2, f1, yDirectrix, ft);
+
+}
+
+static void main()
+{
+    testRBT(); 
+    testMaxHeap(); 
+    testCC();
+    testGetBreakPtX();
+}
+
+main();
+
+/*
+ * alternate way to calculate breakPtX: 
+ * https://github.com/njanakiev/fortune-algorithm/blob/master/FortuneAlgorithm/Voronoi.pde line 271
+float dp = 2.0f * (s1.Y - sweepCoord);
+float a1 = 1.0f / dp;
+float b1 = (-2.0f * s1.X) / dp;
+float c1 = sweepCoord + dp / 4 + s1.X * s1.X / dp;
+
+dp = 2.0f * (s2.Y - sweepCoord);
+float a2 = 1.0f / dp;
+float b2 = (-2.0f * s2.X) / dp;
+float c2 = sweepCoord + dp / 4 + s2.X * s2.X / dp;
+
+float a = a1 - a2;
+float b = b1 - b2;
+float c = c1 - c2;
+
+method 3
+https://github.com/MikkoJo/Voronoi/blob/master/binarysearchtree.py line 481: 
+float a = (s2.Y - s1.Y) / 2.0f;
+float b = ((s2.X) * (s1.Y - sweepCoord)) - ((s1.X) * (s2.Y - sweepCoord));
+float c = ((s1.Y * s1.Y * s2.Y) - (s2.Y * sweepCoord * sweepCoord) - (s1.Y * s1.Y * sweepCoord) - (s2.Y * s2.Y * s1.Y) 
+        + (s1.Y * sweepCoord * sweepCoord) + (s2.Y * s2.Y * sweepCoord) + (s2.Y * s1.X * s1.X) - (sweepCoord * s1.X * s1.X) 
+        - (s1.Y * s2.X * s2.X) + (sweepCoord * s2.X * s2.X)) / 2.0f;
+ */
+
