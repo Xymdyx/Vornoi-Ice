@@ -217,9 +217,10 @@ namespace FortuneAlgo
 
         /*
          * given a start and end pts of a line, determine if a point is right of the line defined by them
+         * right determined from start's perspective....Returns true if it's on the line as well.
          *  https://stackoverflow.com/questions/9612065/breakpoint-convergence-in-fortunes-algorithm
          */
-        private bool isRightOfLine(Vector2 start, Vector2 end, Vector2 point)
+        public bool isRightOfLine(Vector2 start, Vector2 end, Vector2 point)
         {
             return ((end.X - start.X) * (point.Y - start.Y) - (end.Y - start.Y) * (point.X - start.X)) <= 0;
         }

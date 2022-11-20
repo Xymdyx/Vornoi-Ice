@@ -1,5 +1,6 @@
 // See https://aka.ms/new-console-template for more information
 using FortuneAlgo;
+using System.Diagnostics;
 using System.Numerics;
 using System.Security.Cryptography;
 using static System.Net.WebRequestMethods;
@@ -395,6 +396,110 @@ static void testInsertSplit()
     testRBT._printRBT();
 }
 
+static void runRightOfTest(Vector2 start, Vector2 end, Vector2 query,
+    FortuneTracer ft, bool doOpp = false)
+{
+
+    bool isRight = ft.isRightOfLine(start, end, query);
+    Console.WriteLine($"Pt {query} right of Line from {start}->{end}: {isRight}");
+
+    if (doOpp)
+    {
+        isRight = ft.isRightOfLine(end, start, query);
+        Console.WriteLine($"Pt {query} right of Opp Line from {end}->{start}: {isRight}");
+    }
+    Console.WriteLine();
+}
+
+static void testRightOfLine()
+{
+    // test 1...+ slope... true
+    FortuneTracer ft = new();
+
+    Vector2 start = new(0, 0);
+    Vector2 end = new(1, 1);
+    Vector2 query = new(2, .5f);
+    runRightOfTest(start, end, query, ft, true);
+
+    // test 2.. + slope... false expected
+    query = new(-90, -8);
+    runRightOfTest(start, end, query, ft, true);
+
+    // test 3... vertical line.. left
+    start = new(5, -5);
+    end = new(5, 20);
+    query = new(4, 20);
+    runRightOfTest(start, end, query, ft);
+
+    // test 4... vertical line.. right
+    query = new(80, 1000);
+    runRightOfTest(start, end, query, ft, true);
+
+    // test 5...vertical line... on line
+    query = new(5, 10);
+    runRightOfTest(start, end, query, ft);
+
+    // test 6.. horizontal line... above... false
+    start = new(-10, -3);
+    end = new(20, -3);
+    query = new(0, 0);
+    runRightOfTest(start, end, query, ft);
+
+    // test 7... horizontal line... below... true
+    query = new(-5, -5);
+    runRightOfTest(start, end, query, ft, true);
+
+    // test 8... - slope... above... true
+    start = new(-20, 20);
+    end = new(2, -2);
+    query = new(-15, -15);
+    runRightOfTest(start, end, query, ft, true);
+
+
+}
+
+static void runVec2Euclid(Vector2 from, Vector2 to)
+{
+    float dist1 = Vector2.Distance(from, to);
+    float dist2 = Vector2.Distance(to, from);
+    Console.WriteLine($"Dists {from}->{to} && {to}->{from}: {dist1} & {dist2}");
+}
+
+static void testVec2Euclid()
+{
+    // test 1... should be 1
+    Vector2 from = new(0,0);
+    Vector2 to = new(1,0);
+    runVec2Euclid(from, to);
+
+    // test 2... also 1
+    to = new(-1, 0);
+    runVec2Euclid(from, to);
+
+    // test 3 ... also 1
+    to = new(0, 1);
+    runVec2Euclid(from, to);
+
+    // test 4... also 1
+    to = new(0, -1);
+    runVec2Euclid(from, to);
+
+    // test 5... sqrt(2)
+    to = new(1, 1);
+    runVec2Euclid(from, to);
+
+    // test 6... sqrt(2)
+    to = new(-1, 1);
+    runVec2Euclid(from, to);
+
+    // test 7... sqrt(2)
+    to = new(1, -1);
+    runVec2Euclid(from, to);
+
+    //test 8... sqrt(2)
+    to = new(-1, -1);
+}
+
 static void main()
 {
     testRBT(); 
@@ -402,6 +507,8 @@ static void main()
     testCC();
     testGetBreakPtX();
     testInsertSplit();
+    testRightOfLine();
+    testVec2Euclid();
 }
 
 main();
