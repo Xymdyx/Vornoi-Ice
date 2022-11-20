@@ -1,6 +1,8 @@
 // See https://aka.ms/new-console-template for more information
 using FortuneAlgo;
 using System.Numerics;
+using System.Security.Cryptography;
+using static System.Net.WebRequestMethods;
 
 static void testRBT() 
 {
@@ -210,6 +212,8 @@ static void testCC()
     runAllCCTests(s1, s2, s3, fortune);
 }
 
+// alternate way to calculate breakPtX: 
+// https://github.com/njanakiev/fortune-algorithm/blob/master/FortuneAlgorithm/Voronoi.pde line 271
 static float altBreakPtX1(Vector2 s1, Vector2 s2, float sweepCoord)
 {
     float _toleranceThreshold = 1e-5f;
@@ -233,7 +237,8 @@ static float altBreakPtX1(Vector2 s1, Vector2 s2, float sweepCoord)
 
     return x2;
 }
-
+// method 3
+// https://github.com/MikkoJo/Voronoi/blob/master/binarysearchtree.py line 481:
 static float altBreakPtX2(Vector2 s1, Vector2 s2, float sweepCoord)
 {
     float _toleranceThreshold = 1e-5f;
@@ -313,39 +318,90 @@ static void testGetBreakPtX()
 
 }
 
+static void testInsertSplit()
+{
+    RedBlackTree<RegionNode> testRBT = new RedBlackTree<RegionNode>();
+    DCEL vd = new();
+    FortuneTracer ft = new();
+
+    /// Test 1
+    Vector2 s1 = new(0, 41f/4f );
+    RegionNode arc1 = new RegionNode(s1, s1.X);
+    testRBT.insert(s1.X, arc1);
+
+    Console.WriteLine("Test1 Beachline:");
+    testRBT._printRBT();
+
+    RBNode<RegionNode> arc1Node = testRBT.find(s1.X);
+    Vector2 sN = new(2f, 5f);
+
+    Console.WriteLine($"Test1 Beachline after insert&split on {arc1Node} :");
+    ft.insertAndSplit(sN, testRBT, vd, arc1Node);
+
+    testRBT._printRBT();
+
+    // Test 2
+    testRBT.clearRBT();
+
+    arc1 = new RegionNode(s1, s1.X);
+    testRBT.insert(s1.X, arc1);
+
+    Console.WriteLine("Test2 Beachline:");
+    testRBT._printRBT();
+
+    arc1Node = testRBT.find(s1.X);
+    sN = new(-4f, 5f);
+    Console.WriteLine($"Test2 Beachline after insert&split on {arc1Node} :");
+    ft.insertAndSplit(sN, testRBT, vd, arc1Node);
+
+    testRBT._printRBT();
+
+    // Test 3
+    Console.WriteLine("Test3 Beachline:");
+    testRBT._printRBT();
+    arc1Node = testRBT.getSucc(testRBT.root);
+    sN = new(-2f, 5f);
+    Console.WriteLine($"Test3 Beachline after insert&split on {arc1Node} :");
+    ft.insertAndSplit(sN, testRBT, vd, arc1Node);
+
+    testRBT._printRBT();
+
+    // Test 4
+    Console.WriteLine("Test4 Beachline:");
+    testRBT._printRBT();
+
+    arc1Node = testRBT.root;
+    while (!testRBT.isLeaf(arc1Node))
+        arc1Node = arc1Node.left;
+
+    sN = new(-8f, 2f);
+
+    Console.WriteLine($"Test4 Beachline after insert&split on {arc1Node} :");
+    ft.insertAndSplit(sN, testRBT, vd, arc1Node);
+    testRBT._printRBT();
+
+    // Test 5
+    Console.WriteLine("Test5 Beachline:");
+    testRBT._printRBT();
+
+    arc1Node = testRBT.root;
+    while (!testRBT.isLeaf(arc1Node))
+        arc1Node = arc1Node.right;
+
+    sN = new(20f, 2f);
+
+    Console.WriteLine($"Test5 Beachline after insert&split on {arc1Node} :");
+    ft.insertAndSplit(sN, testRBT, vd, arc1Node);
+    testRBT._printRBT();
+}
+
 static void main()
 {
     testRBT(); 
     testMaxHeap(); 
     testCC();
     testGetBreakPtX();
+    testInsertSplit();
 }
 
 main();
-
-/*
- * alternate way to calculate breakPtX: 
- * https://github.com/njanakiev/fortune-algorithm/blob/master/FortuneAlgorithm/Voronoi.pde line 271
-float dp = 2.0f * (s1.Y - sweepCoord);
-float a1 = 1.0f / dp;
-float b1 = (-2.0f * s1.X) / dp;
-float c1 = sweepCoord + dp / 4 + s1.X * s1.X / dp;
-
-dp = 2.0f * (s2.Y - sweepCoord);
-float a2 = 1.0f / dp;
-float b2 = (-2.0f * s2.X) / dp;
-float c2 = sweepCoord + dp / 4 + s2.X * s2.X / dp;
-
-float a = a1 - a2;
-float b = b1 - b2;
-float c = c1 - c2;
-
-method 3
-https://github.com/MikkoJo/Voronoi/blob/master/binarysearchtree.py line 481: 
-float a = (s2.Y - s1.Y) / 2.0f;
-float b = ((s2.X) * (s1.Y - sweepCoord)) - ((s1.X) * (s2.Y - sweepCoord));
-float c = ((s1.Y * s1.Y * s2.Y) - (s2.Y * sweepCoord * sweepCoord) - (s1.Y * s1.Y * sweepCoord) - (s2.Y * s2.Y * s1.Y) 
-        + (s1.Y * sweepCoord * sweepCoord) + (s2.Y * s2.Y * sweepCoord) + (s2.Y * s1.X * s1.X) - (sweepCoord * s1.X * s1.X) 
-        - (s1.Y * s2.X * s2.X) + (sweepCoord * s2.X * s2.X)) / 2.0f;
- */
-

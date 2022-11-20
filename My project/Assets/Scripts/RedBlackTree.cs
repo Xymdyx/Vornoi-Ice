@@ -59,7 +59,7 @@ namespace FortuneAlgo
         public void _minPrint()
         {
             string colStr = (this.color == 0) ? "B" : "R";
-            Console.WriteLine($"{colStr}{this.key}");
+            Console.WriteLine($"{colStr}:{this.key}");
             return;
         }
 
@@ -67,7 +67,10 @@ namespace FortuneAlgo
         public void _fullPrint()
         {
             string colStr = (this.color == 0) ? "B" : "R";
-            Console.WriteLine($"{colStr}K: {this.key} P: {this.parent.key} L: {this.left.key} R: {this.right.key}");
+            float pKey = this.parent != null ? this.parent.key : float.NaN;
+            float lKey = this.left != null ? this.left.key : float.NaN;
+            float rKey = this.right != null ? this.right.key : float.NaN;
+            Console.WriteLine($"{colStr}K: {this.key} P: {pKey} L: {lKey} R: {rKey}");
             return;
         }
 
@@ -75,7 +78,7 @@ namespace FortuneAlgo
         public override string ToString()
         {
             string colStr = (this.color == 0) ? "B" : "R";
-            return $"{colStr}K:{this.key}P:{this.parent.key}L:{this.left.key}R:{this.right.key}";
+            return $"{colStr}:{this.key}";
         }
     }
 

@@ -51,7 +51,7 @@ namespace FortuneAlgo
         /*------------------------------- FIELDS -------------------------------*/
 
         public static float _toleranceThreshold = 1e-5f;
-		private const float _beachlineBoost = 1e-10f;
+		private const float _beachlineBoost = 1e-4f;
         private const float _convergeDivisor = 10f;
         private int _siteCount;
         private List<Vector2> _sites;
@@ -345,14 +345,13 @@ namespace FortuneAlgo
             return arcNode;
         }
 
-
         /*
 		* splits an arc in twain as described in handleSiteEvent. 2 cases, one where focus (pi.x) is < pj.x
 		* and another where pi.x >= pj.x
 		* only called when there is at least one arc in the beachline since we get at most 2n-1 arcs...
 		*/
-        private RBNode<RegionNode> insertAndSplit(Vector2 piSite, MaxHeap<VoronoiEvent> eventQueue,
-                RedBlackTree<RegionNode> beach, DCEL voronoiDCEL, RBNode<RegionNode> targetNode = null!)
+        public RBNode<RegionNode> insertAndSplit(Vector2 piSite,RedBlackTree<RegionNode> beach,
+            DCEL voronoiDCEL, RBNode<RegionNode> targetNode = null!)
         {
             RBNode<RegionNode> pjNode = (targetNode != null) ? targetNode : findArcAboveSite(piSite, beach);
 
@@ -510,7 +509,7 @@ namespace FortuneAlgo
 				return;
 			}
 			
-			RBNode<RegionNode> piNode = insertAndSplit(piSite, eventQueue, beach, voronoiDCEL);
+			RBNode<RegionNode> piNode = insertAndSplit(piSite, beach, voronoiDCEL);
 			RBNode<RegionNode> piSucc = beach.getSucc(piNode);
 			RBNode<RegionNode> piPred = beach.getPred(piNode);
 			
