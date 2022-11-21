@@ -191,6 +191,13 @@ namespace FortuneAlgo
 
             return;
         }
+
+        public override string ToString()
+        {
+            if (isInternalNode())
+                return ($"Int RN: bp:{this.regionSites[0]}->{this.regionSites[1]} he: {this.dcelEdge}");
+            return ($"Arc RN: arc: {this.regionSites[0]} circleEvent:{this.leafCircleEvent}");
+        }
     }
 
     public class RegionNodeComp : IComparer<RegionNode>

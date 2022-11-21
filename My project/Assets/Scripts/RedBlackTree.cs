@@ -571,7 +571,7 @@ namespace FortuneAlgo
             if (start == null)
                 return null!;
 
-            return (el.parent.left == el) ? el.parent.left : el.parent.right;
+            return (el.parent.left == el) ? el.parent.right : el.parent.left;
         }
 
 

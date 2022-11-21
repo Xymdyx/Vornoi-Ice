@@ -551,7 +551,8 @@ static void testFortuneWhole()
     Vector2 lowerLeft = new(-1000, -1000);
     BBox testBBox = new(lowerLeft, upperRight);
     testFt.fortuneMain();
-    /// https://alexbeutel.com/webgl/voronoi.html... compare
+    /// https://alexbeutel.com/webgl/voronoi.html... compare + is down and right
+    /// {"sites":[358,168,464,389,758,590,682,254],"queries":[]} input data format
 }
 
 static void main()
