@@ -500,15 +500,31 @@ static void testVec2Euclid()
     to = new(-1, -1);
 }
 
-static void main()
+static void testFortuneParts()
 {
-    testRBT(); 
-    testMaxHeap(); 
+    testRBT();
+    testMaxHeap();
     testCC();
     testGetBreakPtX();
     testInsertSplit();
     testRightOfLine();
     testVec2Euclid();
+}
+
+static void testFortuneWhole()
+{
+    FortuneTracer testFt = new();
+    Vector2 upperRight = new(1000, 1000);
+    Vector2 lowerLeft = new(-1000, -1000);
+    BBox testBBox = new(lowerLeft, upperRight);
+    testFt.fortuneMain();
+    /// https://alexbeutel.com/webgl/voronoi.html... compare
+}
+
+static void main()
+{
+    // testFortuneParts();
+    testFortuneWhole();
 }
 
 main();

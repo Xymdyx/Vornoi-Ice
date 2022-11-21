@@ -360,6 +360,7 @@ namespace FortuneAlgo
             RegionNode pjArc = pjNode.obj;
             Vector2 pjSite = pjArc.regionSites[0];
             Vector2 breakPt = default;
+            Vertex breakPtVertex = null!;
             List<Vector2> regionDuo = null!;
             HalfEdge pipjHE = new();
             HalfEdge pjpiHE = new();
@@ -397,9 +398,13 @@ namespace FortuneAlgo
 
                 //pj = internal pipj;
                 breakPt = new Vector2(pipjVal, piSite.Y);
+                breakPtVertex = new Vertex(pipjHE, breakPt);
                 pipjHE.Origin = voronoiDCEL.InfiniteVertex; //right halfedge
-                pjpiHE.Origin = new Vertex(pipjHE, breakPt); //left halfedge
+                pjpiHE.Origin = breakPtVertex; //left halfedge
                 setHETwins(pipjHE, pjpiHE);
+                voronoiDCEL.Add(pjpiHE, pipjHE);
+                voronoiDCEL.Add(breakPtVertex);
+
                 regionDuo = new List<Vector2> { piSite, pjSite };
                 pjArc.leafToInternal(regionDuo, pipjHE);
 
@@ -423,9 +428,13 @@ namespace FortuneAlgo
 
             // pj = internal pjpi;
             breakPt = new Vector2(pjpiVal, piSite.Y);
-            pjpiHE.Origin = new Vertex(pjpiHE, breakPt); //left he
+            breakPtVertex = new Vertex(pjpiHE, breakPt);
+            pjpiHE.Origin = breakPtVertex; //left he
             pipjHE.Origin = voronoiDCEL.InfiniteVertex; //right he
             setHETwins(pjpiHE, pipjHE);
+            voronoiDCEL.Add(pjpiHE, pipjHE);
+            voronoiDCEL.Add(breakPtVertex);
+
             regionDuo = new List<Vector2> { pjSite, piSite };
             pjArc.leafToInternal(regionDuo, pjpiHE);
 
@@ -517,7 +526,9 @@ namespace FortuneAlgo
 			if(piPred != null)
 			{
 				RBNode<RegionNode> piPredPred = null!;
-				piPredPred = beach.getPred(piPred);
+				//TODO 11/20, make this and make succ return leaves... Should just be call the
+				// method until we get a leaf....
+				piPredPred = beach.getPred(piPred); 
 				if(piPredPred != null)
 					detectCircleEvent(piPredPred, piPred, piNode, sweepCoord, eventQueue);
 			}
@@ -532,10 +543,14 @@ namespace FortuneAlgo
 			return;
 		}
 
-		/* 
-		 * handle valid circle event. 
-		 * Draws a Voronoi Vertex and removes arc from beachline
-		 */
+        /// <summary>
+        /// handle valid circle event. 
+        /// Draws a Voronoi Vertex and removes arc from beachline
+        /// </summary>
+        /// <param name="circleEvent"></param>
+        /// <param name="eventQueue"></param>
+        /// <param name="beach"></param>
+        /// <param name="voronoiDCEL"></param>
 		public void handleCircleEvent(VoronoiEvent circleEvent, MaxHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach, DCEL voronoiDCEL)
 		{
             if ((voronoiDCEL == null) || (eventQueue == null) || (circleEvent == null) || (beach == null))
@@ -711,7 +726,6 @@ namespace FortuneAlgo
             {
                 eventY = (float) eventQueue.peekTopOfHeap();
                 currEvent = eventQueue.peekTopOfObjHeap();
-                Debug.Assert(currEvent.eventSite.Y == eventY);
 
                 if (currEvent.isSiteEvent())
                     handleSiteEvent(eventY, eventQueue, beach, voronoiDCEL);
@@ -728,9 +742,9 @@ namespace FortuneAlgo
 
         // initialize eventQueueLine
 		// sort by events maximal Y then by X
-        public MaxHeap<VoronoiEvent> initEventQueue()
+        public MaxHeap<VoronoiEvent> initEventQueue(List<Vector2> sites)
         {
-            List<Vector2> orderedSites = new List<Vector2>(this._sites);
+            List<Vector2> orderedSites = new List<Vector2>(sites);
             List<VoronoiEvent> events = new List<VoronoiEvent>();
             // sort by minimal y then by x
             orderedSites.Sort((s1, s2) =>
@@ -767,13 +781,15 @@ namespace FortuneAlgo
         public void fortuneMain()
         {
             DCEL vorDiagram = null!;
+
             //test inits
-            MaxHeap<VoronoiEvent> eventQueue = initEventQueue();
+            List<Vector2> sites = new List<Vector2> { new Vector2(358, 168), new Vector2(464, 389), new Vector2(758, 590),
+            new(682,254) };
+            MaxHeap<VoronoiEvent> eventQueue = initEventQueue(sites);
             RedBlackTree<RegionNode> beach = initBeachSO();
+
             // 11/18...TO TEST
-            // test insert and split
-            // test
-            //vorDiagram = fortuneAlgo(eventQueue, beach);
+            vorDiagram = fortuneAlgo(eventQueue, beach);
             return;
         }
     }

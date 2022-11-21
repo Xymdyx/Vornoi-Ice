@@ -15,20 +15,20 @@ namespace FortuneAlgo
         public Vector2 lowerLeft; //minBound
         public Vector2 upperRight; //maxBound
 
-        BBox(Vector2 lowerLeft, Vector2 upperRight)
+        public BBox(Vector2 lowerLeft, Vector2 upperRight)
         {
             this.lowerLeft = lowerLeft;
             this.upperRight = upperRight;
         }
 
         // utility for computing upperLeft corner
-        Vector2 getUpperLeft()
+        public Vector2 getUpperLeft()
         {
             return new Vector2(this.lowerLeft.X, this.upperRight.Y);
         }
 
         // utility for getting upperRight corner
-        Vector2 getLowerRight()
+        public Vector2 getLowerRight()
         {
             return new Vector2(this.upperRight.X, this.lowerLeft.Y);
         }

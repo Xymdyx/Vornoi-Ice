@@ -170,6 +170,7 @@ namespace FortuneAlgo
                 return;
 
             // If Current value is greater than its parent, then we need to swap  
+            // TYPO fixed.. 11/20
             if (arr[index] > arr[parent])
             {
                 double tmp = arr[index];
@@ -240,7 +241,7 @@ namespace FortuneAlgo
             else if (sizeOfHeap == left)
             {
                 //If there is only a left child
-                if (arr[index] > arr[left]) //left nodes always less than right ones for both min/max heaps
+                if (arr[index] < arr[left]) //left nodes always less than right ones for both min/max heaps
                 {
                     double tmp = arr[index];
                     arr[index] = arr[left];
