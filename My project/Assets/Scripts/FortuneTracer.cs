@@ -161,6 +161,55 @@ namespace FortuneAlgo
             return x2;
         }
 
+        /// <summary>
+        /// get the predecessor leaf of a given leaf node
+        /// </summary>
+        /// <param name="start"></param>
+        /// <param name="beach"></param>
+        /// <returns></returns>
+        private RBNode<RegionNode> getLeafPred(RBNode<RegionNode> start, RedBlackTree<RegionNode> beach) 
+        {
+            // ensure we are using a leaf node.
+            if (start == null || start.obj.isInternalNode() || !beach.isLeaf(start) )
+            {
+                Console.WriteLine($"Something wrong in getLeafPred w {start}");
+                return null!;
+            }
+
+            RBNode<RegionNode> leafPred = null!;
+            RBNode<RegionNode> travel = start;
+            do
+            {
+                leafPred = beach.getPred(travel);
+                travel = leafPred;
+            } while (leafPred != null && leafPred.obj.isInternalNode());
+            return leafPred!;
+        }
+
+        /// <summary>
+        /// get the successor leaf of a given leaf node
+        /// </summary>
+        /// <param name="start"></param>
+        /// <param name="beach"></param>
+        /// <returns></returns>
+        private RBNode<RegionNode> getLeafSucc(RBNode<RegionNode> start, RedBlackTree<RegionNode> beach)
+        {
+            // ensure we are using a leaf node.
+            if (start == null || start.obj.isInternalNode() || !beach.isLeaf(start))
+            {
+                Console.WriteLine($"Something wrong in getLeafSucc w {start}");
+                return null!;
+            }
+
+            RBNode<RegionNode> leafSucc = null!;
+            RBNode<RegionNode> travel = start;
+            do
+            {
+                leafSucc = beach.getSucc(travel);
+                travel = leafSucc;
+            } while (leafSucc != null && leafSucc.obj.isInternalNode());
+            return leafSucc!;
+        }
 
         /*------------------------------- CIRCLE EVENT DETECTION METHODS -------------------------------*/
         /*
@@ -520,15 +569,15 @@ namespace FortuneAlgo
 			}
 			
 			RBNode<RegionNode> piNode = insertAndSplit(piSite, beach, voronoiDCEL);
-			RBNode<RegionNode> piSucc = beach.getSucc(piNode);
-			RBNode<RegionNode> piPred = beach.getPred(piNode);
+			RBNode<RegionNode> piSucc = getLeafSucc(piNode, beach);
+			RBNode<RegionNode> piPred = getLeafPred(piNode, beach);
 			
 			if(piPred != null)
 			{
 				RBNode<RegionNode> piPredPred = null!;
 				//TODO 11/20, make this and make succ return leaves... Should just be call the
 				// method until we get a leaf....
-				piPredPred = beach.getPred(piPred); 
+				piPredPred = getLeafPred(piPred, beach); 
 				if(piPredPred != null)
 					detectCircleEvent(piPredPred, piPred, piNode, sweepCoord, eventQueue);
 			}
@@ -536,7 +585,7 @@ namespace FortuneAlgo
 			if(piSucc != null)
 			{
 				RBNode<RegionNode> piSuccSucc = null!;
-				piSuccSucc = beach.getSucc(piSucc);
+				piSuccSucc = getLeafSucc(piSucc, beach);
 				if(piSuccSucc != null)
 					detectCircleEvent(piNode, piSucc, piSuccSucc, sweepCoord, eventQueue);				
 			}
@@ -575,8 +624,8 @@ namespace FortuneAlgo
 				squeezedGrandParent = squeezedParent.parent;
 			
             // initialize neighboring arcs
-            RBNode<RegionNode> squeezedSucc = beach.getSucc(squeezedNode)!;
-            RBNode<RegionNode> squeezedPred = beach.getPred(squeezedNode)!;
+            RBNode<RegionNode> squeezedSucc = getLeafSucc(squeezedNode, beach)!;
+            RBNode<RegionNode> squeezedPred = getLeafPred(squeezedNode, beach)!;
             RBNode<RegionNode> squeezedSuccSucc = null!;
             RBNode<RegionNode> squeezedPredPred = null!;
             RBNode<RegionNode> queryParentNode = null!;
@@ -605,7 +654,7 @@ namespace FortuneAlgo
 			// 2. update the parent, DO NOT DELETE.            
             if (squeezedParent != null)
             {
-                updatedSite = (squeezedNode == squeezedParent.right) ? squeezedPred.obj.regionSites[0] : squeezedSucc.obj.regionSites[1];
+                updatedSite = (squeezedNode == squeezedParent.right) ? squeezedParent.obj.regionSites[0] : squeezedParent.obj.regionSites[1];
                 squeezedParent.obj.updateInternal(squeezedFocus, updatedSite, circleCenter, voronoiDCEL);
 				parentInternalHE = squeezedParent.obj.dcelEdge;
 				squeezedParent.obj.dcelEdge = toCircleHE;
@@ -631,16 +680,16 @@ namespace FortuneAlgo
 
             // 1. disable all circle events involving squeezed
             // and get nodes for future circle events
-            squeezedArc.leafCircleEvent.disableCircleEvent();
+            squeezedArc.leafDisableCircleEvent();
             if (squeezedSucc != null)
             {
-                squeezedSucc.obj.leafCircleEvent.disableCircleEvent();
-                squeezedSuccSucc = beach.getSucc(squeezedSucc)!;
+                squeezedSucc.obj.leafDisableCircleEvent();
+                squeezedSuccSucc = getLeafSucc(squeezedSucc, beach)!;
             }
             if (squeezedPred != null)
             {
-                squeezedPred.obj.leafCircleEvent.disableCircleEvent();
-                squeezedPredPred = beach.getPred(squeezedPred)!;
+                squeezedPred.obj.leafDisableCircleEvent();
+                squeezedPredPred = getLeafPred(squeezedPred, beach)!;
             }
 
             // update the higher-up internal node with pj to represent pipk...
@@ -783,8 +832,7 @@ namespace FortuneAlgo
             DCEL vorDiagram = null!;
 
             //test inits
-            List<Vector2> sites = new List<Vector2> { new Vector2(358, 168), new Vector2(464, 389), new Vector2(758, 590),
-            new(682,254) };
+            List<Vector2> sites = new List<Vector2> { new Vector2(358, 168), new Vector2(464, 389), new Vector2(758, 590)}; // new(682,254)
             MaxHeap<VoronoiEvent> eventQueue = initEventQueue(sites);
             RedBlackTree<RegionNode> beach = initBeachSO();
 

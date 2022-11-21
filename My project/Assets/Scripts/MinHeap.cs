@@ -141,16 +141,19 @@ namespace FortuneAlgo
                 extractHeadOfHeap();
             }
 
+            int startPos;
             //Insertion of value inside the array happens at the last index of the  array, which is the heapSize. Should cover popping case
             if (!hasSizeLimit())
             {
                 arr.Add(value);
                 ptrList.Add(obj);
+                startPos = arr.Count - 1;
             }
             else
             {
                 arr[sizeOfHeap + 1] = value;
                 ptrList[sizeOfHeap + 1] = obj;
+                startPos = sizeOfHeap + 1;
             }
 
             sizeOfHeap++;
@@ -209,6 +212,8 @@ namespace FortuneAlgo
 
             arr[sizeOfHeap] = double.MaxValue;
             ptrList[sizeOfHeap] = default(T)!; //just to highlight how we overwrote it... should never be reached since sizeOfHeap corresponds to indices
+            arr.RemoveAt(sizeOfHeap);
+            ptrList.RemoveAt(sizeOfHeap);
             sizeOfHeap--;
             HeapifyTopToBottom(delIdx);
 

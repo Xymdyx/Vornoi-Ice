@@ -70,22 +70,10 @@ namespace FortuneAlgo
 		 */
 		public void leafToInternal(List<Vector2> regionDuo, HalfEdge dcelHalfEdge)
 		{
-			// replace sites
-			this._regionSites = regionDuo;
-            // make dangling dcelEdge TODO
-            //  Dcel<LineSegment, Vector2> vd = null! caller's responsibility to update DCEL before.
-            //LineSegment dangling = new LineSegment(breakPt);
-            //LineSegment danglingTwin = dangling.makeOwnTwin();
-            //Vertex<LineSegment, Vector2> vertex = new (breakPt);
-            //Vertex<LineSegment, Vector2> infVertex = new (LineSegment.INFINITY);
-            //HalfEdge<LineSegment, Vector2> breakPtUpHE = new (dangling, vertex);
-            //HalfEdge<LineSegment, Vector2> breakPtDownHE = new (danglingTwin, infVertex);
-            //breakPtUpHE.Twin = breakPtDownHE;
-            //breakPtDownHE.Twin = breakPtUpHE;
+            this.leafDisableCircleEvent();
+            // replace sites
+            this._regionSites = regionDuo;
             this._dcelHalfEdge = dcelHalfEdge;
-
-           
-            //vdSegments.Add(dangling);
 		}
 		
         
@@ -156,40 +144,53 @@ namespace FortuneAlgo
         }
 
         /*
-* intersection of 2 parabs...aka getting the breakpoint between 2 sites
-* via computing parabola intersection given coord of sweepLine
-* Computed every time we need to determine if an inserted arc + or - of one in the RBT.
-* https://math.stackexchange.com/questions/2700033/explanation-of-method-for-finding-the-intersection-of-two-parabolas
-* https://github.com/jacobdweightman/fortunes-algorithm/blob/master/js/breakpoint.js -- Credited
-*/
-    public float getInternalBreakPtX(float sweepCoord)
-    {
-        // given y =  a1x^2 + b1x + c1, y =  a2x^2 + b2^x + c2
-        // solve (a1 - a2)x^2 + (b1 - b2)y + (c1 - c2)
-        // solve quad formula
+        * intersection of 2 parabs...aka getting the breakpoint between 2 sites
+        * via computing parabola intersection given coord of sweepLine
+        * Computed every time we need to determine if an inserted arc + or - of one in the RBT.
+        * https://math.stackexchange.com/questions/2700033/explanation-of-method-for-finding-the-intersection-of-two-parabolas
+        * https://github.com/jacobdweightman/fortunes-algorithm/blob/master/js/breakpoint.js -- Credited
+        */
+        public float getInternalBreakPtX(float sweepCoord)
+        {
+            // given y =  a1x^2 + b1x + c1, y =  a2x^2 + b2^x + c2
+            // solve (a1 - a2)x^2 + (b1 - b2)y + (c1 - c2)
+            // solve quad formula
 		
-		if(!this.isInternalNode()) 
-			return regionSites[0].X;
+		    if(!this.isInternalNode()) 
+			    return regionSites[0].X;
 		
-        Vector2 s1 = this.regionSites[0];
-        Vector2 s2 = this.regionSites[1];
-        float a = s2.Y - s1.Y;
-        float b = 2 * (s2.X * (s1.Y - sweepCoord) - s1.X * (s2.Y - sweepCoord));
-        float c = (s1.X * s1.X * (s2.Y - sweepCoord)) - (s2.X * s2.X)
-            * (s1.Y - sweepCoord) + (s1.Y - s2.Y) * (s1.Y - sweepCoord) * (s2.Y - sweepCoord);
+            Vector2 s1 = this.regionSites[0];
+            Vector2 s2 = this.regionSites[1];
+            float a = s2.Y - s1.Y;
+            float b = 2 * (s2.X * (s1.Y - sweepCoord) - s1.X * (s2.Y - sweepCoord));
+            float c = (s1.X * s1.X * (s2.Y - sweepCoord)) - (s2.X * s2.X)
+                * (s1.Y - sweepCoord) + (s1.Y - s2.Y) * (s1.Y - sweepCoord) * (s2.Y - sweepCoord);
 
-        // if a=0, quadratic formula does not apply
-        if (Math.Abs(a) < 0.001)
-            return -c / b;
+            // if a=0, quadratic formula does not apply
+            if (Math.Abs(a) < 0.001)
+                return -c / b;
 
-        float x1 = (-b + (float)Math.Sqrt(b * b - (4 * a * c))) / (2 * a);
-        float x2 = (-b - (float)Math.Sqrt(b * b - (4 * a * c))) / (2 * a);
+            float x1 = (-b + (float)Math.Sqrt(b * b - (4 * a * c))) / (2 * a);
+            float x2 = (-b - (float)Math.Sqrt(b * b - (4 * a * c))) / (2 * a);
 
-        if (s1.X < x1 && x1 < s2.X)
-            return x1;
+            if (s1.X < x1 && x1 < s2.X)
+                return x1;
 
-        return x2;
-    }
+            return x2;
+        }
+
+        /// <summary>
+        /// util method for disabling active circle event.
+        /// </summary>
+        public void leafDisableCircleEvent()
+        {
+            if (isInternalNode())
+                Console.Write("Trying to disable circle event in internal node");
+            else if (this.leafCircleEvent != null)
+                this.leafCircleEvent.disableCircleEvent();
+
+            return;
+        }
     }
 
     public class RegionNodeComp : IComparer<RegionNode>

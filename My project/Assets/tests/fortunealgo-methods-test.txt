@@ -3,7 +3,28 @@ using FortuneAlgo;
 using System.Diagnostics;
 using System.Numerics;
 using System.Security.Cryptography;
+using System.Xml.Linq;
 using static System.Net.WebRequestMethods;
+
+static void testGetSucc(float target, RedBlackTree<float> testRBT) 
+{
+    RBNode<float> tNode = testRBT.find(target);
+    RBNode<float> tSucc = testRBT.getSucc(tNode);
+    if (tSucc != null)
+        Console.WriteLine($"{tNode.key} succ: {tSucc.key}");
+    else
+        Console.WriteLine($"{tNode.key} succ: None");
+}
+
+static void testGetPred(float target, RedBlackTree<float> testRBT)
+{
+    RBNode<float> tNode = testRBT.find(target);
+    RBNode<float> tPred = testRBT.getPred(tNode);
+    if (tPred != null)
+        Console.WriteLine($"{tNode.key} pred: {tPred.key}");
+    else
+        Console.WriteLine($"{tNode.key} pred: None");
+}
 
 static void testRBT() 
 {
@@ -54,14 +75,26 @@ static void testRBT()
 
     Console.WriteLine("\nRBT Test 4");
     testRBT.insert(10);
-    testRBT.insert(10);
-    testRBT.insert(10);
-    testRBT.insert(10);
+    testRBT.insert(11);
+    testRBT.insert(12);
+    testRBT.insert(9);
     testRBT.insert(20);
-    RBNode<float> tNode = testRBT.find(10);
-    RBNode<float> tSucc = testRBT.getSucc(tNode);
-    Console.WriteLine($"{tNode.key} succ: {tSucc.key}");
-    testRBT.clearRBT();
+    testRBT._printRBT();
+
+    Console.WriteLine("\nTest Get Succ");
+    testGetSucc(10, testRBT);
+    testGetSucc(20, testRBT);
+    testGetSucc(11, testRBT);
+    testGetSucc(12, testRBT);
+    testGetSucc(9, testRBT);
+
+    Console.WriteLine("\nTest Get Pred");
+    testGetPred(10, testRBT);
+    testGetPred(20, testRBT);
+    testGetPred(11, testRBT);
+    testGetPred(12, testRBT);
+    testGetPred(9, testRBT);
+
 }
 
 static void testMinHeap() 
@@ -503,12 +536,12 @@ static void testVec2Euclid()
 static void testFortuneParts()
 {
     testRBT();
-    testMaxHeap();
+    /*testMaxHeap();
     testCC();
     testGetBreakPtX();
     testInsertSplit();
     testRightOfLine();
-    testVec2Euclid();
+    testVec2Euclid();*/
 }
 
 static void testFortuneWhole()
