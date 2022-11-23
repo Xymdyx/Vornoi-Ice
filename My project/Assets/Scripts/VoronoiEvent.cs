@@ -83,6 +83,13 @@ namespace FortuneAlgo
             if(!isSiteEvent())
                 this._circleEventIsActive = false;
         }
-        
+
+        public override string ToString()
+        {
+            if (isSiteEvent())
+                return $"VES:{eventSite}";
+            return $"VEC:{this.circleEventCenter} {circleEventIsActive}";
+        }
+
     }
 }

@@ -596,7 +596,7 @@ namespace FortuneAlgo
         }
 
         /*print the bloody RBT level by level*/
-        public void _printRBT()
+        public void _printRBT(bool printObj = false)
         {
             if (this.root == this.NIL)
             {
@@ -620,7 +620,11 @@ namespace FortuneAlgo
                     if (nodes[i].left != null || nodes[i].right != null)
                     {
                         string col = (nodes[i].color == 0) ? "B" : "R";
-                        Console.Write($"{nodes[i].key}:{col} ");
+                        if(!printObj)
+                            Console.Write($"{nodes[i].key}:{col} ");
+                        else
+                            Console.Write($"{nodes[i].obj}:{col}  ");
+
                     }
                     else
                         Console.Write("NIL ");

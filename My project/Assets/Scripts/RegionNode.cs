@@ -195,8 +195,8 @@ namespace FortuneAlgo
         public override string ToString()
         {
             if (isInternalNode())
-                return ($"Int RN: bp:{this.regionSites[0]}->{this.regionSites[1]} he: {this.dcelEdge}");
-            return ($"Arc RN: arc: {this.regionSites[0]} circleEvent:{this.leafCircleEvent}");
+                return ($"Int RN: {this.regionSites[0]}->{this.regionSites[1]} he: {this.dcelEdge}");
+            return ($"Arc RN: arc: {this.regionSites[0]} CE:{this.leafCircleEvent}");
         }
     }
 

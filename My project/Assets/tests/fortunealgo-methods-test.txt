@@ -266,10 +266,10 @@ static float altBreakPtX1(Vector2 s1, Vector2 s2, float sweepCoord)
     float x1 = (-b + det) / (2 * a);
     float x2 = (-b - det) / (2 * a);
 
-    if (s1.X < x1 && x1 < s2.X)
-        return x1;
+    if (s1.Y < s2.Y) 
+        return Math.Max(x1, x2);
 
-    return x2;
+    return Math.Min(x1, x2);
 }
 // method 3
 // https://github.com/MikkoJo/Voronoi/blob/master/binarysearchtree.py line 481:
@@ -299,10 +299,10 @@ static float altBreakPtX2(Vector2 s1, Vector2 s2, float sweepCoord)
     float x1 = (-b + det) / (2 * a);
     float x2 = (-b - det) / (2 * a);
 
-    if (s1.X < x1 && x1 < s2.X)
-        return x1;
+    if (s1.Y < s2.Y)
+        return Math.Max(x1, x2);
 
-    return x2;
+    return Math.Min(x1, x2);
 }
 
 static void runGetBreakPtXTest(Vector2 f1, Vector2 f2, float directrix, FortuneTracer ft)
@@ -488,7 +488,6 @@ static void testRightOfLine()
     query = new(-15, -15);
     runRightOfTest(start, end, query, ft, true);
 
-
 }
 
 static void runVec2Euclid(Vector2 from, Vector2 to)
@@ -536,12 +535,13 @@ static void testVec2Euclid()
 static void testFortuneParts()
 {
     testRBT();
-    /*testMaxHeap();
-    testCC();
+    //testMaxHeap();
+    //testCC();
     testGetBreakPtX();
-    testInsertSplit();
-    testRightOfLine();
-    testVec2Euclid();*/
+    //testInsertSplit();
+    //testRightOfLine();
+    //testVec2Euclid();
+
 }
 
 static void testFortuneWhole()
@@ -553,6 +553,7 @@ static void testFortuneWhole()
     testFt.fortuneMain();
     /// https://alexbeutel.com/webgl/voronoi.html... compare + is down and right
     /// {"sites":[358,168,464,389,758,590,682,254],"queries":[]} input data format
+    /// {"sites":[37,645,367,435,562,297,785,103],"queries":[]}
 }
 
 static void main()
