@@ -51,7 +51,7 @@ namespace FortuneAlgo
         /*------------------------------- FIELDS -------------------------------*/
 
         public static float _toleranceThreshold = 1e-3f;
-		private const float _beachlineBoost = 1e-3f;
+		private const float _beachlineBoost = 10e6f;
         private const float _convergeDivisor = 10f;
         private int _siteCount;
         private List<Vector2> _sites;
@@ -443,31 +443,33 @@ namespace FortuneAlgo
             float breakPtY;
 
             //we can use this divisor to allow us to exploit an infinite range
-            float levelDivisor = 1f;
+            float levelFactor = 1f;
             RBNode<RegionNode> temp = pjNode;
             
             while(temp.parent != null) 
             {
                 temp = temp.parent;
-                levelDivisor += 1;
+                levelFactor += 1;
             }
 
+            float boostVal1 = (_beachlineBoost) / ((float) Math.Pow(_convergeDivisor,levelFactor));
+            float boostVal2 = (boostVal1) / _convergeDivisor;
             // inserting left->right per level seems to minimize rotation...10/29
             // however, the longevity of this insertion pattern is dubious..
             // Try average as values for inner leaf nodes.
             // Maybe used the height of returned node for divisor...
             // 11/16 -- INSERT THE BREAKPT NODE FIRST so it can become an internal rather than a leaf...
             // ... verified 11/17.. prepare to test...
-            // fixed breakPtX.... values for the beachline are still finnicky. TODO 11/22
 
             if (piSite.X < pjSite.X)
             {
+                // fixed breakPtX.... values for the beachline are still finnicky. TODO 11/22
                 Console.WriteLine("Splitting toward left");
                 pipjVal = getBreakPtX(piSite, pjSite, piSite.Y);
                 pipjVal = pjNode.key;
-                pjpiVal = pipjVal - (_beachlineBoost / levelDivisor);
-                upperPjVal = pipjVal + (_beachlineBoost / levelDivisor);
-                lowerPjVal = pjpiVal - (_beachlineBoost / (2 * (levelDivisor + 1)));
+                pjpiVal = pipjVal - (boostVal1);
+                upperPjVal = pipjVal + (boostVal1);
+                lowerPjVal = pjpiVal - (boostVal2);
 
                 piVal = (pipjVal + pjpiVal) / 2f;
                 piNode = new RegionNode(piSite, piVal);
@@ -501,9 +503,9 @@ namespace FortuneAlgo
             // Case 2:  pi.x >= pj.x... verified 11/17.. prepare to test
             pjpiVal = getBreakPtX(pjSite, piSite, piSite.Y);
             pjpiVal = pjNode.key;
-            pipjVal = pjpiVal + (_beachlineBoost / levelDivisor);
-            upperPjVal = pjpiVal - (_beachlineBoost / levelDivisor);
-            lowerPjVal = pipjVal + (_beachlineBoost / (2 * (levelDivisor + 1)));
+            pipjVal = pjpiVal + (boostVal1);
+            upperPjVal = pjpiVal - (boostVal1);
+            lowerPjVal = pipjVal + (boostVal2);
 
             piVal = (pipjVal + pjpiVal) / 2f;
             piNode = new RegionNode(piSite, piVal);
@@ -883,7 +885,7 @@ namespace FortuneAlgo
             List<Vector2> sites3 = new List<Vector2> { new Vector2(401, 320), new Vector2(617, 315), new(510,162) };
             List<Vector2> sites4 = new List<Vector2> { new Vector2(401, 320), new Vector2(617, 315), new(509, 474), new Vector2(510,162) };
             List<Vector2> sites = new List<Vector2> { new Vector2(37, 645), new Vector2(367,435), new Vector2(562,297), new(785, 103) };
-            MaxHeap<VoronoiEvent> eventQueue = initEventQueue(sites4);
+            MaxHeap<VoronoiEvent> eventQueue = initEventQueue(sites);
             RedBlackTree<RegionNode> beach = initBeachSO();
 
             // 11/18...TO TEST
