@@ -11,7 +11,7 @@ https://stackoverflow.com/questions/9612065/breakpoint-convergence-in-fortunes-a
 https://stackoverflow.com/questions/16695440/boost-intrusive-binary-search-trees/18264705
 */
 /// TODO:
-/// 1. FIGURE OUT HOW TO PURGE BEACHLINE OF AN ARC SIDE COMPLETELY....
+/// 1. PLACE FULL EDGES IN INTERNAL NODES, not one half of an edge.
 // MAJOR DESIGN STUFF:
 // 1. Switch from RedBlackTree to SortedDictionary for beachline if needed
 /*
@@ -107,6 +107,35 @@ namespace FortuneAlgo
         {
             he1.Twin = he2;
             he2.Twin = he1;
+        }
+
+        /* set two half edges as each other's next and prev
+         * he1's next = he2
+         * he2's prev = he1
+         */
+        private void setHENextPrev(HalfEdge he1, HalfEdge he2)
+        {
+            he1.Next = he2;
+            he2.Prev = he1;
+        }
+
+        /// <summary>
+        /// Makes an edge comprised of two halfedges whose twins are known
+        /// </summary>
+        /// <param name="pos"> the origin of the left halfedge and the target of the right halfedge</param>
+        /// <param name="voronoiDCEL"></param>
+        /// <returns> The left halfedge whose origin is the given pos</returns>
+        private HalfEdge makeEdge(Vector2 pos, DCEL voronoiDCEL)
+        {
+            Vertex posVertex = new Vertex(pos);
+            HalfEdge rightHE = new(voronoiDCEL.InfiniteVertex); //right halfedge
+            HalfEdge leftHE = new(posVertex); //left halfedge
+            setHETwins(leftHE, rightHE);
+            voronoiDCEL.Add(leftHE, rightHE);
+            posVertex.Leaving = leftHE;
+            voronoiDCEL.Add(posVertex);
+
+            return leftHE;
         }
 
         /*------------------------------- FORTUNE ALGO COMMON METHODS -------------------------------*/
@@ -430,7 +459,7 @@ namespace FortuneAlgo
             RegionNode pjArc = pjNode.obj;
             Vector2 pjSite = pjArc.regionSites[0];
             Vector2 breakPt = default;
-            Vertex breakPtVertex = null!;
+            //Vertex breakPtVertex = null!;
             List<Vector2> regionDuo = null!;
             HalfEdge pipjHE = new();
             HalfEdge pjpiHE = new();
@@ -480,12 +509,12 @@ namespace FortuneAlgo
                 //pj = internal pipj;
                 breakPtY = yOnParabFromSiteAndX(pjSite, piSite.Y, piSite.X);
                 breakPt = new Vector2(piSite.X, breakPtY);
-                breakPtVertex = new Vertex(pipjHE, breakPt);
-                pipjHE.Origin = voronoiDCEL.InfiniteVertex; //right halfedge
-                pjpiHE.Origin = breakPtVertex; //left halfedge
-                setHETwins(pipjHE, pjpiHE);
-                voronoiDCEL.Add(pjpiHE, pipjHE);
-                voronoiDCEL.Add(breakPtVertex);
+
+                pipjHE = makeEdge(breakPt, voronoiDCEL); //right edge
+                pjpiHE = makeEdge(breakPt, voronoiDCEL); // left edge
+
+                setHENextPrev(pipjHE.Twin, pjpiHE);
+                setHENextPrev(pjpiHE.Twin, pipjHE);
 
                 regionDuo = new List<Vector2> { piSite, pjSite };
                 pjArc.leafToInternal(regionDuo, pipjHE);
@@ -516,12 +545,12 @@ namespace FortuneAlgo
             // pj = internal pjpi;
             breakPtY = yOnParabFromSiteAndX(pjSite, piSite.Y, piSite.X);
             breakPt = new Vector2(piSite.X, breakPtY);
-            breakPtVertex = new Vertex(pjpiHE, breakPt);
-            pjpiHE.Origin = breakPtVertex; //left he
-            pipjHE.Origin = voronoiDCEL.InfiniteVertex; //right he
-            setHETwins(pjpiHE, pipjHE);
-            voronoiDCEL.Add(pjpiHE, pipjHE);
-            voronoiDCEL.Add(breakPtVertex);
+
+            pjpiHE = makeEdge(breakPt, voronoiDCEL); //left edge
+            pipjHE = makeEdge(breakPt, voronoiDCEL); //right edge
+
+            setHENextPrev(pipjHE.Twin, pjpiHE);
+            setHENextPrev(pjpiHE.Twin, pipjHE);
 
             regionDuo = new List<Vector2> { pjSite, piSite };
             pjArc.leafToInternal(regionDuo, pjpiHE);
@@ -558,12 +587,15 @@ namespace FortuneAlgo
             HalfEdge rightRightHE = rightLeftHE.Twin;
 
             // set prevs and nexts so we define faces in CCW fashion
-            leftLeftHE.Next = rightRightHE;
-            rightRightHE.Prev = leftLeftHE;
-            leftRightHE.Prev = newRightHE;
-            newRightHE.Next = leftRightHE;
-            newLeftHE.Prev = rightLeftHE;
-            rightLeftHE.Next = newLeftHE;
+            //leftLeftHE.Next = rightRightHE;
+            //rightRightHE.Prev = leftLeftHE;
+            //leftRightHE.Prev = newRightHE;
+            //newRightHE.Next = leftRightHE;
+            //newLeftHE.Prev = rightLeftHE;
+            //rightLeftHE.Next = newLeftHE;
+            setHENextPrev(leftLeftHE,rightRightHE);
+            setHENextPrev(newRightHE,leftRightHE);
+            setHENextPrev(rightLeftHE,newLeftHE);
 
             return;
         }
@@ -673,26 +705,17 @@ namespace FortuneAlgo
             int updatedIdx = -1;
 			
 			// 2. add circle center to vertices and bind 2 halfEdges to it.
-            HalfEdge fromCircleHE = new();
-            HalfEdge toCircleHE = new();
-            Vertex fromCircleVert = new(fromCircleHE, circleCenter);
-            toCircleHE.Origin = voronoiDCEL.InfiniteVertex;
-            fromCircleHE.Origin = fromCircleVert;
-            setHETwins(fromCircleHE, toCircleHE);
-            voronoiDCEL.Add(toCircleHE, fromCircleHE);
-            voronoiDCEL.Add(fromCircleVert);
+            HalfEdge fromCircleHE = makeEdge(circleCenter, voronoiDCEL);
 
+            // 2. update the parent, DO NOT DELETE.
             // update all breakpts to no longer have squeezed
             // pi,pj,pk on the sweep-line status is replaced with pi,pk
-
-			// 2. update the parent, DO NOT DELETE.
-            // TODO...11/21... BUG HERE with setting these...
             if (squeezedParent != null)
             {
                 updatedSite = (squeezedNode == squeezedParent.right) ? squeezedSucc.obj.regionSites[0] : squeezedPred.obj.regionSites[0];
                 squeezedParent.obj.updateInternal(squeezedFocus, updatedSite, circleCenter, voronoiDCEL);
 				parentInternalHE = squeezedParent.obj.dcelEdge;
-				squeezedParent.obj.dcelEdge = toCircleHE;
+				squeezedParent.obj.dcelEdge = fromCircleHE;
 
                 updatedSite = (squeezedNode == squeezedParent.right) ? squeezedPred.obj.regionSites[0] : squeezedSucc.obj.regionSites[0];
                 queryParentNode = (squeezedNode == squeezedParent.right) ? squeezedSucc.parent : squeezedPred.parent;
@@ -712,7 +735,7 @@ namespace FortuneAlgo
 					queryParentNode.obj.updateInternal(squeezedFocus, updatedSite, circleCenter, voronoiDCEL);
                     higherInternalHE = queryParentNode.obj.dcelEdge;
 					queryParentNode.obj.dcelEdge = fromCircleHE;
-                    setCircleHEPtrs(parentInternalHE, higherInternalHE, fromCircleHE, toCircleHE);
+                    setCircleHEPtrs(parentInternalHE, higherInternalHE, fromCircleHE, fromCircleHE.Twin);
 				}				
             }
 
@@ -885,7 +908,7 @@ namespace FortuneAlgo
             List<Vector2> sites3 = new List<Vector2> { new Vector2(401, 320), new Vector2(617, 315), new(510,162) };
             List<Vector2> sites4 = new List<Vector2> { new Vector2(401, 320), new Vector2(617, 315), new(509, 474), new Vector2(510,162) };
             List<Vector2> sites = new List<Vector2> { new Vector2(37, 645), new Vector2(367,435), new Vector2(562,297), new(785, 103) };
-            MaxHeap<VoronoiEvent> eventQueue = initEventQueue(sites);
+            MaxHeap<VoronoiEvent> eventQueue = initEventQueue(sites4);
             RedBlackTree<RegionNode> beach = initBeachSO();
 
             // 11/18...TO TEST
