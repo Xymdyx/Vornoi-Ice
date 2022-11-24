@@ -563,3 +563,35 @@ static void main()
 }
 
 main();
+
+/* used while trying to figure out how to get break pt using circle with sites pi and pj and touching sweep
+* https://www.emathzone.com/tutorials/geometry/equation-of-a-circle-given-two-points-and-tangent-line.html - 2 methods
+* https://www.youtube.com/watch?v=nRAT0cyp74o -- via distance. These are great if the line has 1 perpendicular line...
+* https://www.youtube.com/watch?v=DsaYcD_Ab9I&t=194s -- circle touches a line. Doesn't work for sweepline
+ */
+ 
+ 
+ 
+////Handle Circle Event Notes
+/*
+ 1. Delete leaf y that reps disappearing arc a from T. Update tuples repping breakpoints/edges at
+ Internal nodes. Rebalance as needed... Delete all circle events involving a from Q via using ptrs
+ from predecessor and successor of y in T (circle event w a as middle is being handled in this method)
+*/
+
+/*2. Add center of circle causing the event as a vertex record to the DCEL d storing the VD. Make 2 half-edges
+	corresponding to new breakpt of the beachline. Set ptrs between them appropriately. Attach 3 new records
+	to half-edge records that end at the vertex.*/
+
+/*3. Check new triples of consecutive arcs that has former left neighbor of a as its middle to see if 2 new breakpoints/edges
+	of the triple converge. If so, insert corresponding circle event into Q, and set ptrs between new circle event and corresponding
+	leaf of T. Do same for triple where former right neighbor is middle arc....
+*/
+
+//// Fortune Algo PC:
+//1.Fill the event queue with site events for each input site.
+//2.While the event queue still has items in it:
+//    If the next event on the queue is a site event:
+//        Add the new site to the beachline
+//    Otherwise it must be an edge-intersection event:
+//        Remove the squeezed cell from the beachline

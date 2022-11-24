@@ -678,6 +678,46 @@ namespace FortuneAlgo
 
             return updatedEls;
         }
+
+        /// <summary>
+        /// grab all elements in the tree
+        /// </summary>
+        /// <param name="x"></param>
+        /// <returns></returns>
+        public List<T> inOrderGrab(RBNode<T> x = null!)
+        {
+            List<T> rbtEls = new List<T>();
+            if (x != null)
+            {
+                rbtEls.AddRange(this.inOrderGrab(x.left));
+                if (x != this.NIL)
+                    rbtEls.Add(x.obj);
+                
+                rbtEls.AddRange(this.inOrderGrab(x.right));
+            }
+
+            return rbtEls;
+        }
+
+        /// <summary>
+        /// grab all elements in the tree
+        /// </summary>
+        /// <param name="x"></param>
+        /// <returns></returns>
+        public List<T> inOrderGrabInternals(RBNode<T> x = null!)
+        {
+            List<T> rbtEls = new List<T>();
+            if (x != null)
+            {
+                rbtEls.AddRange(this.inOrderGrabInternals(x.left));
+                if (!this.isLeaf(x) && !_isNIL(x))
+                    rbtEls.Add(x.obj);
+
+                rbtEls.AddRange(this.inOrderGrabInternals(x.right));
+            }
+
+            return rbtEls;
+        }
     }
 }
 /*debug main

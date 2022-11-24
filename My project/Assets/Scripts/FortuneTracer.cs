@@ -9,16 +9,23 @@ https://blog.ivank.net/fortunes-algorithm-and-implementation.html
 https://jacquesheunis.com/post/fortunes-algorithm/
 https://stackoverflow.com/questions/9612065/breakpoint-convergence-in-fortunes-algorithm
 https://stackoverflow.com/questions/16695440/boost-intrusive-binary-search-trees/18264705
+https://www.boost.org/doc/libs/1_80_0/boost/polygon/voronoi_builder.hpp
+https://www.emathhelp.net/calculators/algebra-2/parabola-calculator/ -- parabola resources
+parabola calculator: https://www.omnicalculator.com/math/parabola
+geogebra intersection tool: https://www.geogebra.org/m/bduwwjqn
+circumcenter calculator: https://www.omnicalculator.com/math/circumcenter-of-a-triangle
+https://www.boost.org/doc/libs/1_80_0/boost/polygon/voronoi_builder.hpp
+https://www.geeksforgeeks.org/find-height-binary-tree-represented-parent-array/ get height of BST Node of element in sorted array in O(n) time
+helpful for sorted dictionary approach
+https://github.com/pvigier/FortuneAlgorithm
 */
+
 /// TODO:
-/// 1. PLACE FULL EDGES IN INTERNAL NODES, not one half of an edge.
+/// 1. How to clip the diagram in a large bounding box. 
+/// 2. How to detect intersection with each face and the ice rink box
 // MAJOR DESIGN STUFF:
 // 1. Switch from RedBlackTree to SortedDictionary for beachline if needed
-/*
-//https://www.boost.org/doc/libs/1_80_0/boost/polygon/voronoi_builder.hpp
-// https://www.geeksforgeeks.org/find-height-binary-tree-represented-parent-array/ get height of BST Node of element in sorted array in O(n) time
-// helpful for sorted dictionary approach
-*/
+
 
 using FortuneAlgo;
 using System;
@@ -27,12 +34,9 @@ using System.Collections.Generic; // sorted dictionary for beachline
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Text;
-//https://www.boost.org/doc/libs/1_80_0/boost/polygon/voronoi_builder.hpp
-// https://www.emathhelp.net/calculators/algebra-2/parabola-calculator/ -- parabola resources
-// parabola calculator: https://www.omnicalculator.com/math/parabola
-// geogebra intersection tool: https://www.geogebra.org/m/bduwwjqn
-// circumcente calculator: https://www.omnicalculator.com/math/circumcenter-of-a-triangle
+
 
 // section header:
 
@@ -58,6 +62,8 @@ namespace FortuneAlgo
         private MaxHeap<VoronoiEvent> _pq;
         // we use only site events in the beachline per Dave Mount's Lecture Notes
         private RedBlackTree<float> _beachLine;
+        //given as lowerLeft and upperRight corners
+        //of 2d face of VoronoiObj in Unity. Bounds Voronoi Diagram
         private BBox _bbox;
         public VoronoiDiagram _vd;
 
@@ -67,8 +73,6 @@ namespace FortuneAlgo
         {
             this._sites = sites;
             this._siteCount = _sites.Count;
-            //given as lowerLeft and upperRight corners
-            //of 2d face of VoronoiObj in Unity. Bounds Voronoi Diagram
             this._bbox =  bbox;
             this._pq = null!;
             this._beachLine = null!;
@@ -79,8 +83,6 @@ namespace FortuneAlgo
         {
             this._sites = null!;
             this._siteCount = 0;
-            //given as lowerLeft and upperRight corners
-            //of 2d face of VoronoiObj in Unity. Bounds Voronoi Diagram
             this._bbox = null!;
             this._pq = null!;
             this._beachLine = null!;
@@ -313,7 +315,6 @@ namespace FortuneAlgo
 		* helper for detectCircleEvent
 		* check if two breakpoints of a consecutive triple converge....
 		* this means the bisectors that define them move in opposite directions and never intersect at the circumcenter
-		* StackOverflow: 
         * breakpts converge if the center of the circle
         * defined by the 3 sites is "in front" of the middle site
         * check if circleCenter is right of the lines formed from the left and middle sites
@@ -405,14 +406,16 @@ namespace FortuneAlgo
         }
 
         /*------------------------------- SITE EVENT METHODS -------------------------------*/
-
-        /*
-		* private helper used by insertAndSplit 
-		* traverse the beachline represented by the RedBlackTree
-		* using getBreakPt at internal nodes....
-		* go left if new site pi < breakPtX at an internal node
-		* stop when we reach a leaf node.
-		*/
+        /// <summary>
+        /// private helper used by insertAndSplit 
+		/// traverse the beachline represented by the RedBlackTree
+        /// using getBreakPt at internal nodes....
+        ///  go left if new site pi < breakPtX at an internal node
+        ///  stop when we reach a leaf node.
+        /// </summary>
+        /// <param name="piSite"></param>
+        /// <param name="beach"></param>
+        /// <returns></returns>
         private RBNode<RegionNode> findArcAboveSite(Vector2 piSite, RedBlackTree<RegionNode> beach)
         {
             RBNode<RegionNode> parent = null!;
@@ -459,7 +462,6 @@ namespace FortuneAlgo
             RegionNode pjArc = pjNode.obj;
             Vector2 pjSite = pjArc.regionSites[0];
             Vector2 breakPt = default;
-            //Vertex breakPtVertex = null!;
             List<Vector2> regionDuo = null!;
             HalfEdge pipjHE = new();
             HalfEdge pjpiHE = new();
@@ -486,7 +488,6 @@ namespace FortuneAlgo
             // inserting left->right per level seems to minimize rotation...10/29
             // however, the longevity of this insertion pattern is dubious..
             // Try average as values for inner leaf nodes.
-            // Maybe used the height of returned node for divisor...
             // 11/16 -- INSERT THE BREAKPT NODE FIRST so it can become an internal rather than a leaf...
             // ... verified 11/17.. prepare to test...
 
@@ -587,12 +588,6 @@ namespace FortuneAlgo
             HalfEdge rightRightHE = rightLeftHE.Twin;
 
             // set prevs and nexts so we define faces in CCW fashion
-            //leftLeftHE.Next = rightRightHE;
-            //rightRightHE.Prev = leftLeftHE;
-            //leftRightHE.Prev = newRightHE;
-            //newRightHE.Next = leftRightHE;
-            //newLeftHE.Prev = rightLeftHE;
-            //rightLeftHE.Next = newLeftHE;
             setHENextPrev(leftLeftHE,rightRightHE);
             setHENextPrev(newRightHE,leftRightHE);
             setHENextPrev(rightLeftHE,newLeftHE);
@@ -601,7 +596,6 @@ namespace FortuneAlgo
         }
 
         /*------------------------------- HANDLE EVENT METHODS -------------------------------*/
-
         /// <summary>
         /// handle site event. Splits an arc in half and modifies the RBT
         /// </summary>
@@ -610,25 +604,7 @@ namespace FortuneAlgo
         /// <param name="beach"></param>
         /// <param name="voronoiDCEL"></param>
         public void handleSiteEvent(float sweepCoord, MaxHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach, DCEL voronoiDCEL)
-		{
-			/*
-			1. if T empty, insert arc immediately, else continue.
-			
-			2. Search in T for arc a vertically above new site pi. If a has a ptr to a circle event,
-			we deactivate that event in the event queue Q as it's a false alarm
-			
-			3. replace leaf of T that reps a with a subtree having 3 leaves, the middle of which is pi.
-			
-			The other two internal nodes are edges and have <pjpi> and <pipj> to represent edges formed by splitting a, pj's arc.
-			There are 2 cases here, one where pi's left of alpha and the other right or equal to alpha.
-			
-			4. Create new half edge records in VD DCEL for edge separating V(pi) and V(pj, which is being traced out by <pipj> and <pjpi>
-			
-			5. Check consecutive triples for circle event. 
-			There are 2 new ones that we need to check pjLPred,pjL,pi and pi,pjR,pjRS. If so, add circle event into Q along with a ptr betwn
-			the node in T, which also gets a ptr to the node in Q.
-			*/
-			
+		{			
 			Vector2 piSite = eventQueue.peekTopOfObjHeap().eventSite;
             float piX = piSite.X;
 
@@ -762,20 +738,6 @@ namespace FortuneAlgo
             if ((squeezedPredPred != null) && (squeezedPred != null) &&  (squeezedSucc != null))
                 detectCircleEvent(squeezedPredPred, squeezedPred, squeezedSucc, sweepCoord, eventQueue, voronoiDCEL);
 
-            /*
-             1. Delete leaf y that reps disappearing arc a from T. Update tuples repping breakpoints/edges at
-			 Internal nodes. Rebalance as needed... Delete all circle events involving a from Q via using ptrs
-			 from predecessor and successor of y in T (circle event w a as middle is being handled in this method)
-            */
-
-            /*2. Add center of circle causing the event as a vertex record to the DCEL d storing the VD. Make 2 half-edges
-				corresponding to new breakpt of the beachline. Set ptrs between them appropriately. Attach 3 new records
-				to half-edge records that end at the vertex.*/
-
-            /*3. Check new triples of consecutive arcs that has former left neighbor of a as its middle to see if 2 new breakpoints/edges
-				of the triple converge. If so, insert corresponding circle event into Q, and set ptrs between new circle event and corresponding
-				leaf of T. Do same for triple where former right neighbor is middle arc....
-			*/
             return;
 		}
 
@@ -802,17 +764,19 @@ namespace FortuneAlgo
         /// <returns></returns>
         public DCEL clipVoronoiDiagram(DCEL voronoiDCEL, RedBlackTree<RegionNode> beach, BBox bbox)
         {
-            // TODO 11/18...
-            // get this working once we can confirm the algo runs correctly
-            // extend infiinite halfedges and see which segments of the bounding box they intersect
-            // set the infinite vertices to their intersection pt with the bounding box
+            // TODO 11/23!!!...
+            /*
+            Make sure that every vertex of the diagram is contained inside the box.
+            Clip every infinite edge.
+            Close the cells.
+            */
+            BBox diagramBox = new();
+            diagramBox.setExtentsGivenDCEL(voronoiDCEL);
+            List<RegionNode> unBoundedBps = beach.inOrderGrabInternals(beach.root);
 
-            // foreach remaining halfedge (acquired by inorder traversal and taking internal nodes HEs):
-            // find line repped by the edge
-            // find all intersections with bbox edges
-            // take closest intersection point that lies on the halfedge
             Console.WriteLine("Final RBT:\n");
             beach._printRBT(true);
+
             return voronoiDCEL;
         }
 
@@ -820,17 +784,10 @@ namespace FortuneAlgo
         /// algorithm that executes Fortune's algo for Voronoi diagrams
         /// via using sweepline and beachline of parabolas 
         ///
-        //1.Fill the event queue with site events for each input site.
-        //2.While the event queue still has items in it:
-        //    If the next event on the queue is a site event:
-        //        Add the new site to the beachline
-        //    Otherwise it must be an edge-intersection event:
-        //        Remove the squeezed cell from the beachline
         /// </summary>
         /// <param name="eventQueue"></param>
         /// <param name="beach"></param>
-        /// <returns></returns>
-        // @returns a built DCEL
+        /// <returns>a built DCEL</returns>
         public DCEL fortuneAlgo(MaxHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach, bool debug = false)
         {
 			DCEL voronoiDCEL = new();
@@ -917,9 +874,3 @@ namespace FortuneAlgo
         }
     }
 }
-
-/* used while trying to figure out how to get break pt using circle with sites pi and pj and touching sweep
-* https://www.emathzone.com/tutorials/geometry/equation-of-a-circle-given-two-points-and-tangent-line.html - 2 methods
-* https://www.youtube.com/watch?v=nRAT0cyp74o -- via distance. These are great if the line has 1 perpendicular line...
-* https://www.youtube.com/watch?v=DsaYcD_Ab9I&t=194s -- circle touches a line. Doesn't work for sweepline
- */
