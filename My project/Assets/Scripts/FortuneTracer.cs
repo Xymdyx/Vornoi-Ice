@@ -122,15 +122,15 @@ namespace FortuneAlgo
         }
 
         /// <summary>
-        /// Makes an edge comprised of two halfedges whose twins are known
+        /// Makes a dangling edge comprised of two halfedges with one infinite endpoint
         /// </summary>
         /// <param name="pos"> the origin of the left halfedge and the target of the right halfedge</param>
         /// <param name="voronoiDCEL"></param>
         /// <returns> The left halfedge whose origin is the given pos</returns>
-        private HalfEdge makeEdge(Vector2 pos, DCEL voronoiDCEL)
+        private HalfEdge makeDanglingEdge(Vector2 pos, DCEL voronoiDCEL)
         {
             Vertex posVertex = new Vertex(pos);
-            HalfEdge rightHE = new(voronoiDCEL.InfiniteVertex); //right halfedge
+            HalfEdge rightHE = new(DCEL.INFINITY); //right halfedge
             HalfEdge leftHE = new(posVertex); //left halfedge
             setHETwins(leftHE, rightHE);
             voronoiDCEL.Add(leftHE, rightHE);
@@ -138,6 +138,35 @@ namespace FortuneAlgo
             voronoiDCEL.Add(posVertex);
 
             return leftHE;
+        }
+
+        /// <summary>
+        /// Makes an edge comprised of two halfedges whose endpoints are known
+        /// </summary>
+        /// <param name="originPos"> the origin of the left halfedge and the target of the right halfedge</param>
+        /// <param name="voronoiDCEL"></param>
+        /// <returns> The left halfedge whose origin is the given pos</returns>
+        private HalfEdge makeEdge(Vector2 originPos, Vector2 targetPos, DCEL voronoiDCEL)
+        {
+            if (voronoiDCEL != null && voronoiDCEL.Vertices != null && voronoiDCEL.Vertices.Count >= 2)
+            {
+                Vertex posVertex = voronoiDCEL.Vertices.FirstOrDefault(v => v.Position == originPos)!;
+                Vertex targetVertex = voronoiDCEL.Vertices.FirstOrDefault(v => v.Position == targetPos)!;
+
+                if (posVertex != null! && targetVertex != null!)
+                {
+                    HalfEdge rightHE = new(targetVertex); //right halfedge
+                    HalfEdge leftHE = new(posVertex); //left halfedge
+                    setHETwins(leftHE, rightHE);
+                    voronoiDCEL.Add(leftHE, rightHE);
+                    posVertex.Leaving = leftHE;
+                    targetVertex.Leaving = rightHE;
+
+                    return leftHE;
+                }
+            }
+            return null!;
+
         }
 
         /*------------------------------- FORTUNE ALGO COMMON METHODS -------------------------------*/
@@ -493,7 +522,6 @@ namespace FortuneAlgo
 
             if (piSite.X < pjSite.X)
             {
-                // fixed breakPtX.... values for the beachline are still finnicky. TODO 11/22
                 Console.WriteLine("Splitting toward left");
                 pipjVal = getBreakPtX(piSite, pjSite, piSite.Y);
                 pipjVal = pjNode.key;
@@ -511,8 +539,8 @@ namespace FortuneAlgo
                 breakPtY = yOnParabFromSiteAndX(pjSite, piSite.Y, piSite.X);
                 breakPt = new Vector2(piSite.X, breakPtY);
 
-                pipjHE = makeEdge(breakPt, voronoiDCEL); //right edge
-                pjpiHE = makeEdge(breakPt, voronoiDCEL); // left edge
+                pipjHE = makeDanglingEdge(breakPt, voronoiDCEL); //right edge
+                pjpiHE = makeDanglingEdge(breakPt, voronoiDCEL); // left edge
 
                 setHENextPrev(pipjHE.Twin, pjpiHE);
                 setHENextPrev(pjpiHE.Twin, pipjHE);
@@ -547,8 +575,8 @@ namespace FortuneAlgo
             breakPtY = yOnParabFromSiteAndX(pjSite, piSite.Y, piSite.X);
             breakPt = new Vector2(piSite.X, breakPtY);
 
-            pjpiHE = makeEdge(breakPt, voronoiDCEL); //left edge
-            pipjHE = makeEdge(breakPt, voronoiDCEL); //right edge
+            pjpiHE = makeDanglingEdge(breakPt, voronoiDCEL); //left edge
+            pipjHE = makeDanglingEdge(breakPt, voronoiDCEL); //right edge
 
             setHENextPrev(pipjHE.Twin, pjpiHE);
             setHENextPrev(pjpiHE.Twin, pipjHE);
@@ -681,7 +709,7 @@ namespace FortuneAlgo
             int updatedIdx = -1;
 			
 			// 2. add circle center to vertices and bind 2 halfEdges to it.
-            HalfEdge fromCircleHE = makeEdge(circleCenter, voronoiDCEL);
+            HalfEdge fromCircleHE = makeDanglingEdge(circleCenter, voronoiDCEL);
 
             // 2. update the parent, DO NOT DELETE.
             // update all breakpts to no longer have squeezed
@@ -752,6 +780,11 @@ namespace FortuneAlgo
             Console.ReadLine();
         }
 
+        private void extendUnBoundedHE()
+        {
+
+        }
+
         /// <summary>
         /// once we've gone through Fortune's algo, we clean up intermediate state
         /// </summary>
@@ -762,7 +795,7 @@ namespace FortuneAlgo
         /// <param name="bbox"> the Bounding Box for the voronoi diagram that we
         /// will clip the infinite edges remaining in beach to </param>
         /// <returns></returns>
-        public DCEL clipVoronoiDiagram(DCEL voronoiDCEL, RedBlackTree<RegionNode> beach, BBox bbox)
+        private DCEL clipVoronoiDiagram(DCEL voronoiDCEL, RedBlackTree<RegionNode> beach, BBox bbox)
         {
             // TODO 11/23!!!...
             /*
@@ -770,13 +803,70 @@ namespace FortuneAlgo
             Clip every infinite edge.
             Close the cells.
             */
-            BBox diagramBox = new();
-            diagramBox.setExtentsGivenDCEL(voronoiDCEL);
-            List<RegionNode> unBoundedBps = beach.inOrderGrabInternals(beach.root);
-
-            Console.WriteLine("Final RBT:\n");
             beach._printRBT(true);
 
+            BBox diagramBox = new();
+            diagramBox.setExtentsGivenDCEL(voronoiDCEL, this._sites);
+            List<RegionNode> unBoundedBps = beach.inOrderGrabInternals(beach.root);
+            unBoundedBps.RemoveAll(x => !(x.isEdgeDangling()));
+            float minY = diagramBox.lowerLeft.Y;
+            foreach (RegionNode edge in unBoundedBps)
+            {
+                float bpX = getBreakPtX(edge.regionSites[0], edge.regionSites[1], minY);
+                Vector2 bpVec = new(bpX, minY);
+                edge.fillInfiniteEndPt(bpVec);
+            }
+
+            // if we're an unbounded edge, then we use ray-intersection
+            // to see where we first hit the bounding box.
+
+            //TODO figure out when to shoot upward...11/25
+            Console.WriteLine("Final RBT:\n");
+            List<HalfEdge> unBoundedHEs = voronoiDCEL.getUnBoundedHalfEdges();
+            List<Vertex> voronoiVerts = voronoiDCEL.Vertices.ToList();
+            foreach(HalfEdge he in unBoundedHEs)
+            {
+                if(voronoiVerts.Contains(he.Origin) ^ voronoiVerts.Contains(he.getTarget()))
+                {
+                    HalfEdge properHE = (he.Origin.Position.Y >= he.getTarget().Position.Y) ? he : he.Twin;
+                    Vector2 ray = he.getRay();
+                    Vector2 boxHit = diagramBox.getFirstIntersection(properHE.Origin.Position, ray);
+                    Debug.Assert(boxHit != BBox.DNE);
+                    Vertex updateVert = (voronoiVerts.Contains(properHE.Origin)) ? properHE.getTarget() : properHE.Origin;
+                    updateVert = he.updateEndPt(updateVert, boxHit);
+                    Debug.Assert(updateVert != DCEL.INFINITY);
+                    voronoiDCEL.Add(updateVert);
+                    voronoiVerts.Add(updateVert);
+                }
+            }
+
+            // now we close the cells
+            foreach(HalfEdge he in unBoundedHEs)
+            {
+                if (he.Prev == null ^ he.Next == null)
+                {
+                    HalfEdge startHE = (he.Prev == null) ? he : he.Twin;
+                    HalfEdge tempHE = startHE;
+                    do
+                    {
+                        tempHE = tempHE.Next;
+                    } while (tempHE.Next != null && tempHE != startHE);
+
+                    // if we've found the otherside, connect it to the startHE
+                    if (tempHE != startHE)
+                    {
+                        HalfEdge newLeft = makeEdge(tempHE.Origin.Position, startHE.Origin.Position, voronoiDCEL);
+                        Debug.Assert(newLeft != null);
+                        // the newLeft is the start's prev
+                        setHENextPrev(newLeft, startHE);
+                        setHENextPrev(tempHE, newLeft);
+                        setHENextPrev(newLeft.Twin, tempHE.Twin);
+                        setHENextPrev(startHE.Twin, newLeft.Twin);
+                    }
+                }
+            }
+            Console.WriteLine("After boudning:");
+            beach._printRBT(true);
             return voronoiDCEL;
         }
 
@@ -821,6 +911,7 @@ namespace FortuneAlgo
 		// sort by events maximal Y then by X
         public MaxHeap<VoronoiEvent> initEventQueue(List<Vector2> sites)
         {
+            this._sites = sites;
             List<Vector2> orderedSites = new List<Vector2>(sites);
             List<VoronoiEvent> events = new List<VoronoiEvent>();
             // sort by minimal y then by x

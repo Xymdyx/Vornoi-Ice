@@ -8,19 +8,22 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
+using System.Linq;
 
 namespace FortuneAlgo
 {
 
-/// <summary>
-/// A doubly connected edge list.
-/// </summary>
-public class DCEL
-{
- 	private readonly List<Vertex> vertices;
- 	private readonly List<Face> faces;
- 	private readonly List<HalfEdge> halfEdges;
- 	private readonly Vertex infiniteVertex;
+    /// <summary>
+    /// A doubly connected edge list.
+    /// </summary>
+    public class DCEL
+    {
+        private readonly List<Vertex> vertices;
+        private readonly List<Face> faces;
+        private readonly List<HalfEdge> halfEdges;
+        private readonly Vertex infiniteVertex;
+
+        public static Vertex INFINITY = new Vertex(new Vector2(float.PositiveInfinity, float.PositiveInfinity));
  
  	internal DCEL()
  	{
@@ -138,7 +141,20 @@ public class DCEL
             adjacentFaces.Add(current.Twin.Face);
         } while ((current = current.Next) != face.Edge) ;
     }
-}
+
+    /// <summary>
+    /// get a list of HalfEdges that don't have a next and/or prev
+    /// </summary>
+    /// <returns></returns>
+    public List<HalfEdge> getUnBoundedHalfEdges()
+        {
+            List<HalfEdge> unBoundedEdges = null!;
+            if (this.halfEdges != null)
+                unBoundedEdges = this.halfEdges.Where(x => x.Prev == null || x.Next == null).ToList();
+            return unBoundedEdges;
+        }
+    }
+
 
     public class HalfEdge
     {
@@ -185,6 +201,53 @@ public class DCEL
             Next = null!;
             Prev = null!;
             Face = null!;
+        }
+
+        /// <summary>
+        /// returns the vertex that this halfedge goes to
+        /// from its origin.
+        /// </summary>
+        /// <returns></returns>
+        public Vertex getTarget()
+        {
+            return this.Twin.Origin;
+        }
+
+        /// <summary>
+        /// returns the normalized ray repping the halfedge
+        /// from its origin to its target
+        /// </summary>
+        /// <returns>
+        /// a Vector2 repping the ray origin->target 
+        /// DCEL.INFINITY if the target is infinity
+        /// </returns>
+        public Vector2 getRay()
+        {
+            if (this.getTarget() == DCEL.INFINITY)
+                return DCEL.INFINITY.Position;
+
+            return Vector2.Normalize(this.getTarget().Position - this.Origin.Position);
+        }
+
+        /// <summary>
+        /// updates an endpoint of this halfedge
+        /// </summary>
+        /// <param name="toUpdate"> one of two endpoints that define this edge</param>
+        /// <param name="updatePos"> the position of the new endpoint that replaces an old one</param>
+        /// <returns> 
+        /// DCEL.INFINITY if toUpdate isn't this halfedge's origin or target
+        /// a reference to the new vertex otherwise
+        /// </returns>
+        public Vertex updateEndPt(Vertex toUpdate, Vector2 updatePos)
+        {
+            if (toUpdate != this.Origin && toUpdate != this.getTarget())
+                return DCEL.INFINITY;
+
+            HalfEdge leavingHE = (this.Origin == toUpdate) ? this : this.Twin;
+            Vertex newEndPt = new Vertex(leavingHE, updatePos);
+            leavingHE.Origin = newEndPt;
+
+            return newEndPt;
         }
 
         public override string ToString()
@@ -253,7 +316,7 @@ public class DCEL
         public static bool operator !=(Vertex v1, Vertex v2) => !(v1 == v2);
         public override bool Equals(object? obj)
         {
-            Vertex v = obj as Vertex;
+            Vertex? v = obj as Vertex;
             if (v is null)
                 return false;
             if (Object.ReferenceEquals(this, v))
@@ -262,6 +325,15 @@ public class DCEL
                 return false;
 
             return (this.Position.X == v.Position.X) && (this.Position.Y == v.Position.Y);
+        }
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
+        }
+
+        public override string ToString()
+        {
+            return $"Vertex:{this.Position}";
         }
     }
 }

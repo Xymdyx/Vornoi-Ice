@@ -85,6 +85,26 @@ namespace FortuneAlgo
             this._makerEvent = null!;
 		}
 
+        public void fillInfiniteEndPt(Vector2 endPt)
+        {
+            HalfEdge myTwin = this._dcelHalfEdge.Twin;
+
+            // find out which halfedge goes off into infinity.. Should only be one.. Revise later possibly 11/12
+            bool isTwinInfiniteHE = (myTwin.Origin == DCEL.INFINITY);
+            bool isThisInfiniteHE = (this._dcelHalfEdge.Origin == DCEL.INFINITY);
+            if (isTwinInfiniteHE && isThisInfiniteHE)
+            {
+                Console.WriteLine("This half edge and its twin are  both infinite? Region Node death");
+                Environment.Exit(-1);
+            }
+
+            else if (isThisInfiniteHE)
+                this._dcelHalfEdge.Origin = new Vertex(this._dcelHalfEdge, endPt);
+
+            else if (isTwinInfiniteHE)
+                myTwin.Origin = new Vertex(myTwin, endPt);
+        }
+
         // update internal and keep it internal
         public int updateInternal(Vector2 deadArc, Vector2 newArc, Vector2 circleCenter, DCEL voronoiDCEL) 
         {
@@ -102,22 +122,7 @@ namespace FortuneAlgo
             }
 
             _regionSites[deadIdx] = newArc;
-            HalfEdge myTwin = this._dcelHalfEdge.Twin;
-
-            // find out which halfedge goes off into infinity.. Should only be one.. Revise later possibly 11/12
-            bool isTwinInfiniteHE = (myTwin.Origin == voronoiDCEL.InfiniteVertex);
-            bool isThisInfiniteHE = (this._dcelHalfEdge.Origin == voronoiDCEL.InfiniteVertex);
-            if (isTwinInfiniteHE && isThisInfiniteHE)
-            {
-                Console.WriteLine("This half edge and its twin are  both infinite? Region Node death");
-                Environment.Exit(-1);
-            }
-
-            else if (isThisInfiniteHE)
-                this._dcelHalfEdge.Origin = new Vertex(this._dcelHalfEdge, circleCenter);
-
-            else if (isTwinInfiniteHE)
-                myTwin.Origin = new Vertex(myTwin, circleCenter);
+            this.fillInfiniteEndPt(circleCenter);
 
             return 0;
         }
@@ -191,6 +196,21 @@ namespace FortuneAlgo
 
             return;
         }
+
+        /// <summary>
+        /// tells if an internal node's edge is dangling or not, i.e. if one 
+        /// vertex is infinite and the other isn't.
+        /// </summary>
+        /// <returns></returns>
+        public bool isEdgeDangling()
+        {
+            if (this.isInternalNode() && 
+                (this.dcelEdge.Origin == DCEL.INFINITY ^ this.dcelEdge.Twin.Origin == DCEL.INFINITY))
+                return true;
+            
+            return false;
+        }
+
 
         public override string ToString()
         {

@@ -8,6 +8,7 @@ using Microsoft.VisualBasic;
 using System;
 using System.Numerics;
 using System.Text;
+using System.Collections.Generic;
 
 namespace FortuneAlgo
 {
@@ -15,7 +16,9 @@ namespace FortuneAlgo
     {
         public Vector2 lowerLeft; //minBound
         public Vector2 upperRight; //maxBound
-        public static float _epsilon = 1e-3f;
+        public static float _tolerance = 1e-3f;
+        public static Vector2 DNE = new Vector2(float.PositiveInfinity, float.NegativeInfinity);
+
 
         public BBox(Vector2 lowerLeft, Vector2 upperRight)
         {
@@ -48,8 +51,8 @@ namespace FortuneAlgo
         /// <returns>if p is inside this box</returns>
         public bool containsPoint(Vector2 p)
         {
-            return (p.X >= lowerLeft.X - _epsilon) && (p.X <= upperRight.X - _epsilon)
-                && (p.Y >= lowerLeft.Y - _epsilon) && (p.Y <= upperRight.Y - _epsilon);
+            return (p.X >= lowerLeft.X - _tolerance) && (p.X <= upperRight.X - _tolerance)
+                && (p.Y >= lowerLeft.Y - _tolerance) && (p.Y <= upperRight.Y - _tolerance);
         }
 
         /// <summary>
@@ -58,12 +61,12 @@ namespace FortuneAlgo
         /// <param name="origin"></param>
         /// <param name="direction"></param>
         /// <returns></returns>
-        Vector2 getFirstIntersection(Vector2 origin, Vector2 direction)
+        public Vector2 getFirstIntersection(Vector2 origin, Vector2 direction)
         {
             // origin must be in the box
             // Intersection intersection;
             float t = float.MaxValue;
-            Vector2 intersection = default;
+            Vector2 intersection = BBox.DNE;
             if (direction.X > 0.0)
             {
                 t = (upperRight.X - origin.X) / direction.X;
@@ -100,13 +103,13 @@ namespace FortuneAlgo
             return intersection;
         }
 
-        public void setExtentsGivenDCEL(DCEL dcel)
+        public void setExtentsGivenDCEL(DCEL dcel, List<Vector2> sites)
         {
             float minX = float.MaxValue; float minY = float.MaxValue;
             float maxX = float.MinValue; float maxY = float.MinValue;
             foreach (Vertex v in dcel.Vertices)
             {
-                if (v != dcel.InfiniteVertex)
+                if (v != DCEL.INFINITY)
                 {
                     minX = Math.Min(v.Position.X, minX);
                     minY = Math.Min(v.Position.Y, minY);
@@ -115,6 +118,15 @@ namespace FortuneAlgo
                 }
             }
 
+            foreach(Vector2 site in sites)
+            {
+                minX = Math.Min(site.X, minX);
+                minY = Math.Min(site.Y, minY);
+                maxX = Math.Max(site.X, maxX);
+                maxY = Math.Max(site.Y, maxY);
+            }
+            minX -= 10; minY -= 10;
+            maxX += 10; maxY += 10;
             this.lowerLeft = new(minX, minY);
             this.upperRight = new(maxX, maxY);
         }
