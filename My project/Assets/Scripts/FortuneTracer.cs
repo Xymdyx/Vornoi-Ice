@@ -21,8 +21,7 @@ https://github.com/pvigier/FortuneAlgorithm
 */
 
 /// TODO:
-/// 1. How to clip the diagram in a large bounding box. 
-/// 2. How to detect intersection with each face and the ice rink box
+/// 1. How to detect intersection with each face and the ice rink box
 // MAJOR DESIGN STUFF:
 // 1. Switch from RedBlackTree to SortedDictionary for beachline if needed
 
@@ -953,10 +952,6 @@ namespace FortuneAlgo
 
             //test inits
             List<Vector2> sites1 = new List<Vector2> { new Vector2(358, 168), new Vector2(464, 389), new Vector2(758, 590), new(682, 254) };
-            List<Vector2> sites2 = new List<Vector2> { new Vector2(401,320), new Vector2(617,315)};
-            List<Vector2> sites3 = new List<Vector2> { new Vector2(401, 320), new Vector2(617, 315), new(510,162) };
-            List<Vector2> sites4 = new List<Vector2> { new Vector2(401, 320), new Vector2(617, 315), new(509, 474), new Vector2(510,162) };
-            List<Vector2> sites = new List<Vector2> { new Vector2(37, 645), new Vector2(367,435), new Vector2(562,297), new(785, 103) };
             MaxHeap<VoronoiEvent> eventQueue = initEventQueue(sites1);
             RedBlackTree<RegionNode> beach = initBeachSO();
 

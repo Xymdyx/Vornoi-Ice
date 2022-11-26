@@ -3,6 +3,8 @@
  desc: class that represents a 2d Bounding Box
         used to contain Voronoi Diagram's edges
  due: Thursday 11/29
+
+https://github.com/pvigier/FortuneAlgorithm/blob/master/src/Box.cpp... credit
 */
 using System.Collections.Generic; 
 using System;
@@ -55,53 +57,11 @@ namespace FortuneAlgo
         }
 
         /// <summary>
-        /// gets the first intersection of a point in a given direction
+        /// Given a DCEL, set this box's bounds
+        /// to contain all vertices in the DCEL
         /// </summary>
-        /// <param name="origin"></param>
-        /// <param name="direction"></param>
-        /// <returns></returns>
-        public Vector2 getFirstIntersection(Vector2 origin, Vector2 direction)
-        {
-            // origin must be in the box
-            // Intersection intersection;
-            float t = float.MaxValue;
-            Vector2 intersection = BBox.DNE;
-            if (direction.X > 0.0)
-            {
-                t = (upperRight.X - origin.X) / direction.X;
-                // intersection.side = Side::RIGHT;
-                intersection = origin + Vector2.Multiply(direction, t);
-            }
-            else if (direction.X < 0.0)
-            {
-                t = (lowerLeft.X - origin.X) / direction.X;
-                //intersection.side = Side::LEFT;
-                intersection = origin + Vector2.Multiply(direction, t);
-            }
-
-            if (direction.Y > 0.0)
-            {
-                float newT = (upperRight.Y - origin.Y) / direction.Y;
-                if (newT < t)
-                {
-                        // intersection.side = Side::TOP;
-                        intersection = origin + Vector2.Multiply(direction, newT);
-                }
-            }
-
-            else if (direction.Y < 0.0)
-            {
-                float newT = (lowerLeft.Y - origin.Y) / direction.Y;
-                if (newT < t)
-                {
-                    // intersection.side = Side::BOTTOM;
-                    intersection = origin + Vector2.Multiply(direction, newT);
-                }
-            }
-
-            return intersection;
-        }
-
+        /// <param name="dcel"></param>
+        /// <param name="sites"></param>
         public void setExtentsGivenDCEL(DCEL dcel, List<Vector2> sites)
         {
             float minX = float.MaxValue; float minY = float.MaxValue;
@@ -117,7 +77,7 @@ namespace FortuneAlgo
                 }
             }
 
-            foreach(Vector2 site in sites)
+            foreach (Vector2 site in sites)
             {
                 minX = Math.Min(site.X, minX);
                 minY = Math.Min(site.Y, minY);
@@ -167,6 +127,125 @@ namespace FortuneAlgo
             doesExpand = doesPointExpandBox(b.upperRight);
 
             return doesExpand;
+        }
+
+        /// <summary>
+        /// gets the first intersection of a point in a given direction
+        /// </summary>
+        /// <param name="origin"></param>
+        /// <param name="direction"></param>
+        /// <returns></returns>
+        public Vector2 getFirstIntersection(Vector2 origin, Vector2 direction)
+        {
+            // origin must be in the box
+            // Intersection intersection;
+            float t = float.MaxValue;
+            Vector2 intersection = BBox.DNE;
+            if (direction.X > 0.0)
+            {
+                t = (upperRight.X - origin.X) / direction.X;
+                // intersection.side = Side::RIGHT;
+                intersection = origin + Vector2.Multiply(direction, t);
+            }
+            else if (direction.X < 0.0)
+            {
+                t = (lowerLeft.X - origin.X) / direction.X;
+                //intersection.side = Side::LEFT;
+                intersection = origin + Vector2.Multiply(direction, t);
+            }
+
+            if (direction.Y > 0.0)
+            {
+                float newT = (upperRight.Y - origin.Y) / direction.Y;
+                if (newT < t)
+                {
+                        // intersection.side = Side::TOP;
+                        intersection = origin + Vector2.Multiply(direction, newT);
+                }
+            }
+
+            else if (direction.Y < 0.0)
+            {
+                float newT = (lowerLeft.Y - origin.Y) / direction.Y;
+                if (newT < t)
+                {
+                    // intersection.side = Side::BOTTOM;
+                    intersection = origin + Vector2.Multiply(direction, newT);
+                }
+            }
+
+            return intersection;
+        }
+
+        /// <summary>
+        /// given the origin and target of a ray
+        /// find point(s) where this ray intersects the box
+        /// there are 2 max.
+        /// </summary>
+        /// <param name="origin"> the start pt of the ray</param>
+        /// <param name="target"> the target pt of the ray</param>
+        /// <returns> a Vector with at most 2 intersection points </returns>
+        public Vector2[] getIntersections(Vector2 origin, Vector2 target)
+        {
+            Vector2[] ints = new Vector2[2];
+            float[] dists = new float[2];
+            int idx = 0;
+
+            Vector2 direction = Vector2.Normalize(target - origin);
+            float left = this.lowerLeft.X;
+            float bottom = this.lowerLeft.Y;
+            float right = this.upperRight.X;
+            float top = this.upperRight.Y;
+
+            // left
+            if (origin.X < (left - _tolerance) || target.X < (left - _tolerance))
+            {
+                dists[idx] = (left - origin.X) / direction.X;
+                if (dists[idx] > _tolerance && dists[idx] < (1.0 - _tolerance))
+                {
+                    ints[idx] = origin + Vector2.Multiply(direction, dists[idx]);
+                    if (ints[idx].Y >= (bottom - _tolerance) && ints[idx].Y <= (top + _tolerance))
+                        ++idx;
+                }
+            }
+            // right
+            if (origin.X > (right + _tolerance) || target.X > (right + _tolerance))
+            {
+                dists[idx] = (right - origin.X) / direction.X;
+                if (dists[idx] > _tolerance && dists[idx] < (1.0 - _tolerance))
+                {
+                    ints[idx] = origin + Vector2.Multiply(direction, dists[idx]);
+                    if (ints[idx].Y >= (bottom - _tolerance) && ints[idx].Y <= (top + _tolerance))
+                        ++idx;
+                }
+            }
+            // bottom
+            if (origin.Y < (bottom - _tolerance) || target.Y < (bottom - _tolerance))
+            {
+                dists[idx] = (bottom - origin.Y) / direction.Y;
+                if ( idx < 2 && dists[idx] > _tolerance && dists[idx] < (1.0 - _tolerance))
+                {
+                    ints[idx] = origin + Vector2.Multiply(direction, dists[idx]);
+                    if (ints[idx].X >= (left - _tolerance) && ints[idx].X <= (right + _tolerance))
+                        ++idx;
+                }
+            }
+            // top
+            if (origin.Y > (top + _tolerance) || target.Y > (top + _tolerance))
+            {
+                dists[idx] = (top - origin.Y) / direction.Y;
+                if ( idx < 2 && dists[idx] > _tolerance && dists[idx] < (1.0 - _tolerance))
+                {
+                    ints[idx] = origin + Vector2.Multiply(direction, dists[idx]);
+                    if (ints[idx].X >= (left - _tolerance) && ints[idx].X <= (right + _tolerance))
+                        ++idx;
+                }
+            }
+            //sort nearest to furthest
+            if(idx == 2 && dists[0] > dists[1])
+                (ints[0], ints[1]) = (ints[1], ints[0]);
+
+            return ints;
         }
     }
 }

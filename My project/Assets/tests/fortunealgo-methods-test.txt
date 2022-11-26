@@ -535,12 +535,12 @@ static void testVec2Euclid()
 static void testFortuneParts()
 {
     testRBT();
-    //testMaxHeap();
-    //testCC();
+    testMaxHeap();
+    testCC();
     testGetBreakPtX();
-    //testInsertSplit();
-    //testRightOfLine();
-    //testVec2Euclid();
+    testInsertSplit();
+    testRightOfLine();
+    testVec2Euclid();
 
 }
 
@@ -550,6 +550,11 @@ static void testFortuneWhole()
     Vector2 upperRight = new(1000, 1000);
     Vector2 lowerLeft = new(-1000, -1000);
     BBox testBBox = new(lowerLeft, upperRight);
+    List<Vector2> sites1 = new List<Vector2> { new Vector2(358, 168), new Vector2(464, 389), new Vector2(758, 590), new(682, 254) };
+    List<Vector2> sites2 = new List<Vector2> { new Vector2(401, 320), new Vector2(617, 315) };
+    List<Vector2> sites3 = new List<Vector2> { new Vector2(401, 320), new Vector2(617, 315), new(510, 162) };
+    List<Vector2> sites4 = new List<Vector2> { new Vector2(401, 320), new Vector2(617, 315), new(509, 474), new Vector2(510, 162) };
+    List<Vector2> sites = new List<Vector2> { new Vector2(37, 645), new Vector2(367, 435), new Vector2(562, 297), new(785, 103) };
     testFt.fortuneMain();
     /// https://alexbeutel.com/webgl/voronoi.html... compare + is down and right
     /// {"sites":[358,168,464,389,758,590,682,254],"queries":[]} input data format
@@ -563,15 +568,21 @@ static void main()
 }
 
 main();
-
 /* used while trying to figure out how to get break pt using circle with sites pi and pj and touching sweep
 * https://www.emathzone.com/tutorials/geometry/equation-of-a-circle-given-two-points-and-tangent-line.html - 2 methods
 * https://www.youtube.com/watch?v=nRAT0cyp74o -- via distance. These are great if the line has 1 perpendicular line...
 * https://www.youtube.com/watch?v=DsaYcD_Ab9I&t=194s -- circle touches a line. Doesn't work for sweepline
  */
- 
- 
- 
+
+//// Fortune Algo PC:
+//1.Fill the event queue with site events for each input site.
+//2.While the event queue still has items in it:
+//    If the next event on the queue is a site event:
+//        Add the new site to the beachline
+//    Otherwise it must be an edge-intersection event:
+//        Remove the squeezed cell from the beachline
+
+
 ////Handle Circle Event Notes
 /*
  1. Delete leaf y that reps disappearing arc a from T. Update tuples repping breakpoints/edges at
@@ -588,10 +599,20 @@ main();
 	leaf of T. Do same for triple where former right neighbor is middle arc....
 */
 
-//// Fortune Algo PC:
-//1.Fill the event queue with site events for each input site.
-//2.While the event queue still has items in it:
-//    If the next event on the queue is a site event:
-//        Add the new site to the beachline
-//    Otherwise it must be an edge-intersection event:
-//        Remove the squeezed cell from the beachline
+/* Site event description
+1. if T empty, insert arc immediately, else continue.
+
+2. Search in T for arc a vertically above new site pi. If a has a ptr to a circle event,
+we deactivate that event in the event queue Q as it's a false alarm
+
+3. replace leaf of T that reps a with a subtree having 3 leaves, the middle of which is pi.
+
+The other two internal nodes are edges and have <pjpi> and <pipj> to represent edges formed by splitting a, pj's arc.
+There are 2 cases here, one where pi's left of alpha and the other right or equal to alpha.
+
+4. Create new half edge records in VD DCEL for edge separating V(pi) and V(pj, which is being traced out by <pipj> and <pjpi>
+
+5. Check consecutive triples for circle event. 
+There are 2 new ones that we need to check pjLPred,pjL,pi and pi,pjR,pjRS. If so, add circle event into Q along with a ptr betwn
+the node in T, which also gets a ptr to the node in Q.
+*/
