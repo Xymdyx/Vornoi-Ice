@@ -34,7 +34,6 @@ using System.Collections.Generic; // sorted dictionary for beachline
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
-using System.Runtime.InteropServices;
 using System.Text;
 
 
@@ -101,7 +100,7 @@ namespace FortuneAlgo
 		/* checks if a difference is nearly zero*/
 		private bool aroundZero(float diff)
 		{
-			return (-(_toleranceThreshold) <= diff) && (diff <= _toleranceThreshold);
+			return (Math.Abs(diff) <= _toleranceThreshold);
 		}
 
         /* set two half edges as each other's twins */
@@ -795,32 +794,33 @@ namespace FortuneAlgo
         /// <param name="bbox"> the Bounding Box for the voronoi diagram that we
         /// will clip the infinite edges remaining in beach to </param>
         /// <returns></returns>
-        private DCEL clipVoronoiDiagram(DCEL voronoiDCEL, RedBlackTree<RegionNode> beach, BBox bbox)
+        private DCEL clipVoronoiDiagram(DCEL voronoiDCEL, RedBlackTree<RegionNode> beach, BBox mapBox = null)
         {
-            // TODO 11/23!!!...
-            /*
-            Make sure that every vertex of the diagram is contained inside the box.
-            Clip every infinite edge.
-            Close the cells.
-            */
             beach._printRBT(true);
 
+            // Ensure every vertex of the diagram is contained inside the box.
             BBox diagramBox = new();
             diagramBox.setExtentsGivenDCEL(voronoiDCEL, this._sites);
+
+            if (mapBox != null)
+                diagramBox.doesBoxExpandBox(mapBox);
+
             List<RegionNode> unBoundedBps = beach.inOrderGrabInternals(beach.root);
             unBoundedBps.RemoveAll(x => !(x.isEdgeDangling()));
             float minY = diagramBox.lowerLeft.Y;
+
+            //Clip every infinite edge.
             foreach (RegionNode edge in unBoundedBps)
             {
                 float bpX = getBreakPtX(edge.regionSites[0], edge.regionSites[1], minY);
-                Vector2 bpVec = new(bpX, minY);
+                float bpY = yOnParabFromSiteAndX(edge.regionSites[0], minY, bpX);
+                float bpY2 = yOnParabFromSiteAndX(edge.regionSites[1], minY, bpX);
+                Vector2 bpVec = new(bpX, bpY);
                 edge.fillInfiniteEndPt(bpVec);
             }
 
             // if we're an unbounded edge, then we use ray-intersection
             // to see where we first hit the bounding box.
-
-            //TODO figure out when to shoot upward...11/25
             Console.WriteLine("Final RBT:\n");
             List<HalfEdge> unBoundedHEs = voronoiDCEL.getUnBoundedHalfEdges();
             List<Vertex> voronoiVerts = voronoiDCEL.Vertices.ToList();
@@ -828,8 +828,8 @@ namespace FortuneAlgo
             {
                 if(voronoiVerts.Contains(he.Origin) ^ voronoiVerts.Contains(he.getTarget()))
                 {
-                    HalfEdge properHE = (he.Origin.Position.Y >= he.getTarget().Position.Y) ? he : he.Twin;
-                    Vector2 ray = he.getRay();
+                    HalfEdge properHE = voronoiDCEL.isSharedVertex(he.Origin) ? he : he.Twin;
+                    Vector2 ray = properHE.getRay();
                     Vector2 boxHit = diagramBox.getFirstIntersection(properHE.Origin.Position, ray);
                     Debug.Assert(boxHit != BBox.DNE);
                     Vertex updateVert = (voronoiVerts.Contains(properHE.Origin)) ? properHE.getTarget() : properHE.Origin;
@@ -865,7 +865,7 @@ namespace FortuneAlgo
                     }
                 }
             }
-            Console.WriteLine("After boudning:");
+            Console.WriteLine("After bounding:");
             beach._printRBT(true);
             return voronoiDCEL;
         }
@@ -901,7 +901,7 @@ namespace FortuneAlgo
                 eventQueue.extractHeadOfHeap();
                 iters++;
             }
-            //TODO
+
             //3.Cleanup any remaining intermediate state via bounding box clipping
             clipVoronoiDiagram(voronoiDCEL, beach, this._bbox);
             return voronoiDCEL;
@@ -912,6 +912,7 @@ namespace FortuneAlgo
         public MaxHeap<VoronoiEvent> initEventQueue(List<Vector2> sites)
         {
             this._sites = sites;
+            this._siteCount = sites.Count;
             List<Vector2> orderedSites = new List<Vector2>(sites);
             List<VoronoiEvent> events = new List<VoronoiEvent>();
             // sort by minimal y then by x
@@ -948,7 +949,7 @@ namespace FortuneAlgo
         //main algorithm for this class
         public void fortuneMain()
         {
-            DCEL vorDiagram = null!;
+            DCEL vorDCEL = null!;
 
             //test inits
             List<Vector2> sites1 = new List<Vector2> { new Vector2(358, 168), new Vector2(464, 389), new Vector2(758, 590), new(682, 254) };
@@ -956,11 +957,16 @@ namespace FortuneAlgo
             List<Vector2> sites3 = new List<Vector2> { new Vector2(401, 320), new Vector2(617, 315), new(510,162) };
             List<Vector2> sites4 = new List<Vector2> { new Vector2(401, 320), new Vector2(617, 315), new(509, 474), new Vector2(510,162) };
             List<Vector2> sites = new List<Vector2> { new Vector2(37, 645), new Vector2(367,435), new Vector2(562,297), new(785, 103) };
-            MaxHeap<VoronoiEvent> eventQueue = initEventQueue(sites4);
+            MaxHeap<VoronoiEvent> eventQueue = initEventQueue(sites1);
             RedBlackTree<RegionNode> beach = initBeachSO();
 
             // 11/18...TO TEST
-            vorDiagram = fortuneAlgo(eventQueue, beach, false);
+            // makes a bounded VoronoiDiagram
+            vorDCEL = fortuneAlgo(eventQueue, beach, false);
+
+            // 11/25... further clip the diagram
+            // if necessary to display in a bounding box.
+            VoronoiDiagram voronoiDiagram = new(this._sites, vorDCEL, this._bbox);
             return;
         }
     }

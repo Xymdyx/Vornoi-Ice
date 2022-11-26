@@ -12,12 +12,26 @@ namespace FortuneAlgo
         private DCEL _vdDCEL;
         private BBox _vdBox;
 
+
+        public VoronoiDiagram(List<Vector2> sites, DCEL vdDCEL, BBox bbox = null!)
+        {
+            _sites = sites!;
+            _vdDCEL = vdDCEL;
+            _vdBox = bbox!;
+        }
+
         //constructor
-        VoronoiDiagram(List<Vector2> sites, BBox bbox)
+        public VoronoiDiagram(List<Vector2> sites, BBox bbox)
         {
             _sites = sites!;
             _vdDCEL = null!;
             _vdBox = bbox!;
+        }
+
+        public DCEL clipVoronoiDiagramToBBox()
+        {
+            DCEL clippedDCEL = new();
+            return clippedDCEL;
         }
     }
 }

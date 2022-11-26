@@ -4,11 +4,10 @@
         used to contain Voronoi Diagram's edges
  due: Thursday 11/29
 */
-using Microsoft.VisualBasic;
+using System.Collections.Generic; 
 using System;
 using System.Numerics;
 using System.Text;
-using System.Collections.Generic;
 
 namespace FortuneAlgo
 {
@@ -18,7 +17,7 @@ namespace FortuneAlgo
         public Vector2 upperRight; //maxBound
         public static float _tolerance = 1e-3f;
         public static Vector2 DNE = new Vector2(float.PositiveInfinity, float.NegativeInfinity);
-
+        private const float _boundBoost = 10f;
 
         public BBox(Vector2 lowerLeft, Vector2 upperRight)
         {
@@ -125,10 +124,49 @@ namespace FortuneAlgo
                 maxX = Math.Max(site.X, maxX);
                 maxY = Math.Max(site.Y, maxY);
             }
-            minX -= 10; minY -= 10;
-            maxX += 10; maxY += 10;
+            minX -= _boundBoost; minY -= _boundBoost;
+            maxX += _boundBoost; maxY += _boundBoost;
             this.lowerLeft = new(minX, minY);
             this.upperRight = new(maxX, maxY);
+        }
+
+        /// <summary>
+        /// expand the bounding box to contain a new point
+        /// if necessary
+        /// </summary>
+        /// <param name="p"></param>
+        public bool doesPointExpandBox(Vector2 p)
+        {
+            float minX = Math.Min(this.lowerLeft.X, p.X);
+            float minY = Math.Min(this.lowerLeft.Y, p.Y);
+            float maxX = Math.Max(this.upperRight.X, p.X);
+            float maxY = Math.Max(this.upperRight.Y, p.Y);
+
+            Vector2 minXY = new(minX, minY);
+            Vector2 maxXY = new(maxX, maxY);
+
+            if (minXY == this.lowerLeft && maxXY == this.upperRight)
+                return false;
+
+            this.lowerLeft = minXY;
+            this.upperRight = maxXY;
+
+            return true;
+        }
+
+        /// <summary>
+        /// expand this bounding box given another bounding box we wish to map to.
+        /// </summary>
+        /// <param name="b"></param>
+        /// <returns></returns>
+        public bool doesBoxExpandBox(BBox b)
+        {
+            bool doesExpand = doesPointExpandBox(b.lowerLeft);
+            doesExpand = doesPointExpandBox(b.getLowerRight());
+            doesExpand = doesPointExpandBox(b.getUpperLeft());
+            doesExpand = doesPointExpandBox(b.upperRight);
+
+            return doesExpand;
         }
     }
 }

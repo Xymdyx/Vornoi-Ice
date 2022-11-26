@@ -6,8 +6,8 @@
 */
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Numerics;
+using System.Diagnostics;
 using System.Linq;
 
 namespace FortuneAlgo
@@ -142,16 +142,28 @@ namespace FortuneAlgo
         } while ((current = current.Next) != face.Edge) ;
     }
 
-    /// <summary>
-    /// get a list of HalfEdges that don't have a next and/or prev
-    /// </summary>
-    /// <returns></returns>
-    public List<HalfEdge> getUnBoundedHalfEdges()
+        /// <summary>
+        /// get a list of HalfEdges that don't have a next and/or prev
+        /// </summary>
+        /// <returns></returns>
+        public List<HalfEdge> getUnBoundedHalfEdges()
         {
             List<HalfEdge> unBoundedEdges = null!;
             if (this.halfEdges != null)
                 unBoundedEdges = this.halfEdges.Where(x => x.Prev == null || x.Next == null).ToList();
             return unBoundedEdges;
+        }
+
+        /// <summary>
+        /// determine if the given vertex is shared by multiple edges
+        /// if the number of halfedges whose origin is v > 1, then it's shared
+        /// </summary>
+        /// <param name="v"></param>
+        /// <returns></returns>
+        public bool isSharedVertex(Vertex v)
+        {
+            int heCount = this.halfEdges.FindAll(he => he.Origin == v).Count;
+            return  heCount > 1;
         }
     }
 
