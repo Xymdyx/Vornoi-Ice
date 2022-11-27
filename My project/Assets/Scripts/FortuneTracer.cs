@@ -596,7 +596,7 @@ namespace FortuneAlgo
         /*------------------------------- CIRCLE EVENT METHODS -------------------------------*/
 
         /// <summary>
-        /// private helper function for handleCircleEvent
+        /// private helper function for handleCircleEvent SETS CW... 11/26!!!
         /// that sets the halfedge pointers appropriately
         /// left halfedges come from starting breakpt
         /// right halfedges end at the voronoi vertex
@@ -613,7 +613,7 @@ namespace FortuneAlgo
             HalfEdge leftRightHE = leftLeftHE.Twin;
             HalfEdge rightRightHE = rightLeftHE.Twin;
 
-            // set prevs and nexts so we define faces in CCW fashion
+            // set prevs and nexts so we define faces in CCW fashion.... actually CW - 11/26
             setHENextPrev(leftLeftHE,rightRightHE);
             setHENextPrev(newRightHE,leftRightHE);
             setHENextPrev(rightLeftHE,newLeftHE);
@@ -778,9 +778,44 @@ namespace FortuneAlgo
             Console.ReadLine();
         }
 
-        private void extendUnBoundedHE()
+        /// <summary>
+        /// given a list of points along the bounding box,
+        /// make and link appropriate edges between them
+        /// </summary>
+        /// <param name="boundPts"></param>
+        /// <param name="startHE"></param>
+        /// <param name="endHE"></param>
+        private void sewUpBoundaryPoints(List<Vector2> boundPts, HalfEdge startHE, HalfEdge endHE, DCEL voronoiDCEL)
         {
+            // make edges betwen each boundary point
+            // link with the one behind it
+            List<HalfEdge> boundHEs = new();
+            for(int i = 0; i < boundPts.Count; i++)
+            {
+                if (i < boundPts.Count - 1)
+                {
+                    HalfEdge newLeft = makeEdge(boundPts[i], boundPts[i + 1], voronoiDCEL);
+                    Debug.Assert(newLeft != null);
+                    boundHEs.Add(newLeft);
+                }
+            }
+            boundHEs.Insert(0, endHE);
+            boundHEs.Add(startHE);
 
+            for(int i = 1; i < boundHEs.Count; i++)
+            {
+                setHENextPrev(boundHEs[i - 1], boundHEs[i]);
+            }
+
+            ///HalfEdge newLeft = makeEdge(endPos, startPos, voronoiDCEL);
+            // the newLeft is the start's prev
+            // setHENextPrev(newLeft, startHE);
+            // setHENextPrev(endHE, newLeft);
+
+            // new right should be isolated as they define clockwise rotation along box
+            // but should be joined later in cleanup
+            //setHENextPrev(newLeft.Twin, tempHE.Twin);
+            //setHENextPrev(startHE.Twin, newLeft.Twin);
         }
 
         /// <summary>
@@ -793,13 +828,17 @@ namespace FortuneAlgo
         /// <param name="bbox"> the Bounding Box for the voronoi diagram that we
         /// will clip the infinite edges remaining in beach to </param>
         /// <returns></returns>
-        private DCEL clipVoronoiDiagram(DCEL voronoiDCEL, RedBlackTree<RegionNode> beach, BBox mapBox = null)
+        private DCEL clipVoronoiDiagram(DCEL voronoiDCEL, RedBlackTree<RegionNode> beach, float minEventY, BBox mapBox = null)
         {
             beach._printRBT(true);
 
             // Ensure every vertex of the diagram is contained inside the box.
             BBox diagramBox = new();
-            diagramBox.setExtentsGivenDCEL(voronoiDCEL, this._sites);
+            diagramBox.setExtentsGivenDCEL(voronoiDCEL, this._sites, minEventY);
+
+            // ensure we capture lowest circle event
+            if (diagramBox.lowerLeft.Y > minEventY)
+                diagramBox.lowerLeft.Y = minEventY;
 
             if (mapBox != null)
                 diagramBox.doesBoxExpandBox(mapBox);
@@ -839,6 +878,17 @@ namespace FortuneAlgo
                 }
             }
 
+            // add bounding box vertices to DCEL.
+            Vertex boxTR = new(diagramBox.upperRight);
+            Vertex boxTL = new(diagramBox.getUpperLeft());
+            Vertex boxBR = new(diagramBox.getLowerRight());
+            Vertex boxBL = new(diagramBox.lowerLeft);
+
+            voronoiDCEL.Add(boxTR);
+            voronoiDCEL.Add(boxTL);
+            voronoiDCEL.Add(boxBR);
+            voronoiDCEL.Add(boxBL);
+
             // now we close the cells
             foreach(HalfEdge he in unBoundedHEs)
             {
@@ -851,16 +901,16 @@ namespace FortuneAlgo
                         tempHE = tempHE.Next;
                     } while (tempHE.Next != null && tempHE != startHE);
 
-                    // if we've found the otherside, connect it to the startHE
+                    // if we've found the otherside, connect it to the startHE along bounding box
                     if (tempHE != startHE)
                     {
-                        HalfEdge newLeft = makeEdge(tempHE.Origin.Position, startHE.Origin.Position, voronoiDCEL);
-                        Debug.Assert(newLeft != null);
-                        // the newLeft is the start's prev
-                        setHENextPrev(newLeft, startHE);
-                        setHENextPrev(tempHE, newLeft);
-                        setHENextPrev(newLeft.Twin, tempHE.Twin);
-                        setHENextPrev(startHE.Twin, newLeft.Twin);
+                        Vector2 startPos = startHE.Origin.Position;
+                        Vector2 endPos = tempHE.getTarget().Position;
+                        List<Vector2> boundPoints = diagramBox.getCornersBetween2BorderPts(startPos, endPos);
+                        boundPoints.Insert(0, endPos);
+                        boundPoints.Add(startPos);
+                        sewUpBoundaryPoints(boundPoints, startHE, tempHE, voronoiDCEL);
+
                     }
                 }
             }
@@ -883,7 +933,8 @@ namespace FortuneAlgo
             float eventY;
             VoronoiEvent currEvent;
             int iters = 1;
-
+            float minEventY = float.MaxValue;
+            /// need to keep track of the lowest circle event point to pass. 11/26
             while (!eventQueue.heapEmpty()) 
             {
                 if (debug)
@@ -897,12 +948,14 @@ namespace FortuneAlgo
                 else if(!currEvent.isSiteEvent() && currEvent.circleEventIsActive)
                     handleCircleEvent(currEvent, eventQueue, beach, voronoiDCEL);
 
+                if (eventY < minEventY)
+                    minEventY = eventY;
                 eventQueue.extractHeadOfHeap();
                 iters++;
             }
 
             //3.Cleanup any remaining intermediate state via bounding box clipping
-            clipVoronoiDiagram(voronoiDCEL, beach, this._bbox);
+            clipVoronoiDiagram(voronoiDCEL, beach, minEventY, this._bbox);
             return voronoiDCEL;
         }
 

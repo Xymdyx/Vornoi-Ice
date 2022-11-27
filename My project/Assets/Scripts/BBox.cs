@@ -13,6 +13,18 @@ using System.Text;
 
 namespace FortuneAlgo
 {
+    /// <summary>
+    /// defines box borders in a CLOCKWISE MANNER
+    /// </summary>
+    public enum boxBorders
+    {
+        NONE = -1,
+        TOP = 0,
+        RIGHT = 1,
+        BOTTOM = 2,
+        LEFT = 3
+    }
+
     public class BBox
     {
         public Vector2 lowerLeft; //minBound
@@ -62,7 +74,7 @@ namespace FortuneAlgo
         /// </summary>
         /// <param name="dcel"></param>
         /// <param name="sites"></param>
-        public void setExtentsGivenDCEL(DCEL dcel, List<Vector2> sites)
+        public void setExtentsGivenDCEL(DCEL dcel, List<Vector2> sites, float minYCoord = float.MaxValue)
         {
             float minX = float.MaxValue; float minY = float.MaxValue;
             float maxX = float.MinValue; float maxY = float.MinValue;
@@ -84,6 +96,10 @@ namespace FortuneAlgo
                 maxX = Math.Max(site.X, maxX);
                 maxY = Math.Max(site.Y, maxY);
             }
+
+            if (minYCoord != float.MaxValue)
+                minY = Math.Min(minYCoord, minY);
+
             minX -= _boundBoost; minY -= _boundBoost;
             maxX += _boundBoost; maxY += _boundBoost;
             this.lowerLeft = new(minX, minY);
@@ -246,6 +262,136 @@ namespace FortuneAlgo
                 (ints[0], ints[1]) = (ints[1], ints[0]);
 
             return ints;
+        }
+
+        /// quickly tell if a query point is a corner of this box
+        public bool isBoxCorner(Vector2 query)
+        {
+            bool isUsualExtent = (query == this.lowerLeft) || (query == this.upperRight);
+            bool isOtherExtent = (query == getLowerRight()) || (query == getUpperLeft());
+            return isUsualExtent || isOtherExtent;
+        }
+
+        /// tell if query point is on the box's boundaries
+        public bool isOnBoxBorders(Vector2 query)
+        {
+            bool inYRange = (this.lowerLeft.Y <= query.Y && query.Y <= this.upperRight.Y);
+            bool inXRange = (this.lowerLeft.X <= query.X && query.X <= this.upperRight.X);
+            if (query.X == this.lowerLeft.X && inYRange)
+                return true;
+            else if (query.X == this.upperRight.X && inYRange)
+                return true;
+            else if (query.Y == lowerLeft.Y && inXRange)
+                return true;
+            else if (query.Y == upperRight.Y && inXRange)
+                return true;
+
+            return false;
+        }
+        /// get enum value for a query pt
+        private boxBorders grabBorderValueOfPoint(Vector2 query)
+        {
+            if (!isOnBoxBorders(query))
+                return boxBorders.NONE;
+            else if (query.X == this.lowerLeft.X)
+                return boxBorders.LEFT;
+            else if (query.X == this.upperRight.X)
+                return boxBorders.RIGHT;
+            else if (query.Y == lowerLeft.Y)
+                return boxBorders.BOTTOM;
+            else if (query.Y == upperRight.Y)
+                return boxBorders.TOP;
+
+            return boxBorders.NONE;
+        }
+
+        /// <summary>
+        /// given 2 points on the bounding box,
+        /// find 2 corners between them along a ccw walk... make this clockwise... 11/26
+        /// </summary>
+        /// <param name="start"></param>
+        /// <param name="end"></param>
+        /// <returns></returns>
+        public List<Vector2> getCornersBetween2BorderPts(Vector2 start, Vector2 end)
+        {
+            boxBorders startVal = grabBorderValueOfPoint(start);
+            boxBorders endVal = grabBorderValueOfPoint(end);
+            List<Vector2> corners = new();
+            switch (startVal)
+            {
+                case boxBorders.TOP:
+                    if (endVal == boxBorders.RIGHT)
+                        corners.Add(this.upperRight);
+                    else if(endVal == boxBorders.BOTTOM)
+                    {
+                        corners.Add(this.upperRight);
+                        corners.Add(this.getLowerRight());
+                    }
+                    else if(endVal == boxBorders.LEFT)
+                    {
+                        corners.Add(this.upperRight);
+                        corners.Add(this.getLowerRight());
+                        corners.Add(this.lowerLeft);
+                    }
+                    break;
+
+                case boxBorders.RIGHT:
+                    if (endVal == boxBorders.BOTTOM)
+                        corners.Add(this.getLowerRight());
+                    else if (endVal == boxBorders.LEFT)
+                    {
+                        corners.Add(this.getLowerRight());
+                        corners.Add(this.lowerLeft);
+                    }
+                    else if (endVal == boxBorders.TOP)
+                    {
+                        corners.Add(this.getLowerRight());
+                        corners.Add(this.lowerLeft);
+                        corners.Add(this.getUpperLeft());
+                    }
+                    break;
+
+                case boxBorders.BOTTOM:
+                    if (endVal == boxBorders.LEFT)
+                        corners.Add(this.lowerLeft);
+                    else if (endVal == boxBorders.TOP)
+                    {
+                        corners.Add(this.lowerLeft);
+                        corners.Add(this.getUpperLeft());
+                    }
+                    else if (endVal == boxBorders.RIGHT)
+                    {
+                        corners.Add(this.lowerLeft);
+                        corners.Add(this.getUpperLeft());
+                        corners.Add(this.upperRight);
+                    }
+                    break;
+
+                case boxBorders.LEFT:
+                    if (endVal == boxBorders.TOP)
+                        corners.Add(this.getUpperLeft());
+                    else if (endVal == boxBorders.RIGHT)
+                    {
+                        corners.Add(this.getUpperLeft());
+                        corners.Add(this.upperRight);
+                    }
+                    else if (endVal == boxBorders.BOTTOM)
+                    {
+                        corners.Add(this.getUpperLeft());
+                        corners.Add(this.upperRight);
+                        corners.Add(this.getLowerRight());
+                    }
+                    break;
+            }
+
+            // if they are corners, remove them
+            if (corners.Count > 0)
+            {
+                corners.Remove(start);
+                corners.Remove(end);
+            }
+
+            return corners;
         }
     }
 }
