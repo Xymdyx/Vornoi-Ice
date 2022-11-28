@@ -32,14 +32,28 @@ namespace FortuneAlgo
         faces = new List<Face>();
         halfEdges = new List<HalfEdge>();
     }
- 
-    internal void Add(Vertex vertex)
-    {
+
+        // custom clone method used by VoronoiDiagram
+        internal DCEL Copy()
+        {
+            List<Vertex> verts = new List<Vertex> { this.infiniteVertex };
+            List<Face> faces = new List<Face>();
+            List<HalfEdge> hes = new List<HalfEdge>();
+            for(int i = 0; i < this.halfEdges.Count; i++)
+            {
+
+            }
+            DCEL copy = new();
+            return copy;
+        }
+
+        internal void Add(Vertex vertex)
+        {
             Debug.Assert(vertex != null);
 
             if(!this.vertices.Contains(vertex))
                 vertices.Add(vertex);
-    }
+        }
 
     internal void Add(Face face)
     {
@@ -165,8 +179,43 @@ namespace FortuneAlgo
             int heCount = this.halfEdges.FindAll(he => he.Origin == v).Count;
             return  heCount > 1;
         }
-    }
 
+        // attempt to remove a vertex
+        public bool removeVertex(Vertex v)
+        {
+            bool success = this.vertices.Remove(v);
+            if (!success)
+                Console.WriteLine($"Attempted to remove non-existent vertex {v} from DCEL");
+
+            return success;
+        }
+
+        // attempt to remove a halfedge
+        public bool removeHE(HalfEdge he)
+        {
+            bool success = this.halfEdges.Remove(he);
+            if (!success)
+                Console.WriteLine($"Attempted to remove non-existent HE {he} from DCEL");
+
+            return success;
+        }
+
+        public bool doesHalfEdgeDefineSiteFace(Vector2 site, HalfEdge he)
+        {
+            Face query = this.faces.Find(f => f.Position == site);
+            if (query == null)
+            {
+                Console.WriteLine("No such face has site {site}");
+                return false;
+            }
+            else if (query.Edge != null || he == null)
+                return false;
+
+            query.Edge = he;
+            he.Face = query;
+            return true;
+        }
+    }
 
     public class HalfEdge
     {

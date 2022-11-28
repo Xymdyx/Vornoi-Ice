@@ -85,6 +85,10 @@ namespace FortuneAlgo
             this._makerEvent = null!;
 		}
 
+        /// <summary>
+        /// fill infinite point with endPt
+        /// </summary>
+        /// <param name="endPt"></param>
         public void fillInfiniteEndPt(Vector2 endPt)
         {
             HalfEdge myTwin = this._dcelHalfEdge.Twin;
@@ -215,8 +219,8 @@ namespace FortuneAlgo
         public override string ToString()
         {
             if (isInternalNode())
-                return ($"Int RN: {this.regionSites[0]}->{this.regionSites[1]} he: {this.dcelEdge}");
-            return ($"Arc RN: arc: {this.regionSites[0]} CE:{this.leafCircleEvent}");
+                return ($"IN: {this.regionSites[0]}->{this.regionSites[1]} he: {this.dcelEdge}");
+            return ($"AN: {this.regionSites[0]} CE:{this.leafCircleEvent}");
         }
     }
 

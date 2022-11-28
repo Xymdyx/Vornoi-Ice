@@ -18,10 +18,12 @@ https://www.boost.org/doc/libs/1_80_0/boost/polygon/voronoi_builder.hpp
 https://www.geeksforgeeks.org/find-height-binary-tree-represented-parent-array/ get height of BST Node of element in sorted array in O(n) time
 helpful for sorted dictionary approach
 https://github.com/pvigier/FortuneAlgorithm
+https://github.com/Zalgo2462/VoronoiLib/tree/6e468f60e2129fff8201ffd0b0b9f4777e2892aa/VoronoiLib
 */
 
 /// TODO:
 /// 1. How to detect intersection with each face and the ice rink box
+/// 2. Figure out insertion method or rethink approach. Still giving issues with keys.
 // MAJOR DESIGN STUFF:
 // 1. Switch from RedBlackTree to SortedDictionary for beachline if needed
 
@@ -235,7 +237,8 @@ namespace FortuneAlgo
             if (start == null || start.obj.isInternalNode() || !beach.isLeaf(start) )
             {
                 Console.WriteLine($"Something wrong in getLeafPred w {start}");
-                beach._printRBT();
+                beach._printRBT(true);
+                Console.WriteLine();
                 return null!;
             }
 
@@ -261,7 +264,8 @@ namespace FortuneAlgo
             if (start == null || start.obj.isInternalNode() || !beach.isLeaf(start))
             {
                 Console.WriteLine($"Something wrong in getLeafSucc w {start}");
-                beach._printRBT();
+                beach._printRBT(true);
+                Console.WriteLine();
                 return null!;
             }
 
@@ -316,7 +320,7 @@ namespace FortuneAlgo
             float sweepYIncrement = (circCenter.Y - sweepCoord) / _convergeDivisor;
 
             //get future points
-            float futureSweepY = sweepCoord + sweepYIncrement;
+            float futureSweepY = sweepCoord - sweepYIncrement;
             float futureBp1X = getBreakPtX(bp1.regionSites[0], bp1.regionSites[1], futureSweepY);
             float futureBp2X = getBreakPtX(bp2.regionSites[0], bp2.regionSites[1], futureSweepY);
             Vector2 futureBp1 = new Vector2(futureBp1X, futureSweepY);
@@ -460,6 +464,7 @@ namespace FortuneAlgo
                 if (bpSites.Count != 2)
                     Console.WriteLine($"Supposed internal arc has {bpSites.Count} instead of 2 arcs.");
 
+                // bpX = getBreakPtX(bpSites[1], bpSites[0], piSite.Y); same as below
                 bpX = getBreakPtX(bpSites[0], bpSites[1], piSite.Y);
                 if (piSite.X < bpX)
                 {
@@ -485,21 +490,28 @@ namespace FortuneAlgo
         {
             RBNode<RegionNode> pjNode = (targetNode != null) ? targetNode : findArcAboveSite(piSite, beach);
 
+            RBNode<RegionNode> pjSuccNode = beach.getSucc(pjNode);
+            RBNode<RegionNode> pjPredNode = beach.getSucc(pjNode);
+
             RegionNode piNode = null!;
             RegionNode pjArc = pjNode.obj;
             Vector2 pjSite = pjArc.regionSites[0];
-            Vector2 breakPt = default;
             List<Vector2> regionDuo = null!;
             HalfEdge pipjHE = new();
             HalfEdge pjpiHE = new();
+
+            float breakPtY = yOnParabFromSiteAndX(pjSite, piSite.Y, piSite.X);
+            Vector2 breakPt = new Vector2(piSite.X, breakPtY);
+
+            float pjKeyVal = float.MaxValue;
+            //if (pjPredNode != null && pjSuccNode != null) // attempt 2... try average of pred and succ if they exist 11/28
+            //    pjKeyVal = (pjPredNode.key + pjSuccNode.key) / 2f;
 
             float pipjVal = 0.0f;
             float pjpiVal = 0.0f;
             float piVal = 0.0f;
             float upperPjVal = 0.0f;
             float lowerPjVal = 0.0f;
-            float breakPtY;
-
             //we can use this divisor to allow us to exploit an infinite range
             float levelFactor = 1f;
             RBNode<RegionNode> temp = pjNode;
@@ -512,39 +524,35 @@ namespace FortuneAlgo
 
             float boostVal1 = (_beachlineBoost) / ((float) Math.Pow(_convergeDivisor,levelFactor));
             float boostVal2 = (boostVal1) / _convergeDivisor;
-            // inserting left->right per level seems to minimize rotation...10/29
-            // however, the longevity of this insertion pattern is dubious..
-            // Try average as values for inner leaf nodes.
             // 11/16 -- INSERT THE BREAKPT NODE FIRST so it can become an internal rather than a leaf...
-            // ... verified 11/17.. prepare to test...
-
+            // ... verified 11/17.. still buggy.. 11/27
+            // averaging works for piVal, boosting doesn't work long term. Consider keys not the approach for this
             if (piSite.X < pjSite.X)
             {
                 Console.WriteLine("Splitting toward left");
                 pipjVal = getBreakPtX(piSite, pjSite, piSite.Y);
-                pipjVal = pjNode.key;
+                pipjVal = (pjKeyVal == float.MaxValue) ? pjNode.key : pjKeyVal; ;
                 pjpiVal = pipjVal - (boostVal1);
                 upperPjVal = pipjVal + (boostVal1);
                 lowerPjVal = pjpiVal - (boostVal2);
-
-                piVal = (pipjVal + pjpiVal) / 2f;
-                piNode = new RegionNode(piSite, piVal);
 
                 if (piVal == pipjVal || piVal == pjpiVal)
                     Console.WriteLine("Pi value is equal to pipj value in insertAndSplit.");
 
                 //pj = internal pipj;
-                breakPtY = yOnParabFromSiteAndX(pjSite, piSite.Y, piSite.X);
-                breakPt = new Vector2(piSite.X, breakPtY);
-
                 pipjHE = makeDanglingEdge(breakPt, voronoiDCEL); //right edge
                 pjpiHE = makeDanglingEdge(breakPt, voronoiDCEL); // left edge
 
                 setHENextPrev(pipjHE.Twin, pjpiHE);
                 setHENextPrev(pjpiHE.Twin, pipjHE);
+                voronoiDCEL.doesHalfEdgeDefineSiteFace(pjSite, pipjHE);
+                voronoiDCEL.doesHalfEdgeDefineSiteFace(piSite, pjpiHE);
 
                 regionDuo = new List<Vector2> { piSite, pjSite };
                 pjArc.leafToInternal(regionDuo, pipjHE);
+
+                piVal = (pipjVal + pjpiVal) / 2f;
+                piNode = new RegionNode(piSite, piVal);
 
                 //pj.val = pipjVal and insertion
                 pjNode.key = pipjVal;
@@ -558,29 +566,30 @@ namespace FortuneAlgo
 
             // Case 2:  pi.x >= pj.x... verified 11/17.. prepare to test
             pjpiVal = getBreakPtX(pjSite, piSite, piSite.Y);
-            pjpiVal = pjNode.key;
+
+            //try just doing average of pred and succ as new key val
+            pjpiVal = (pjKeyVal == float.MaxValue) ? pjNode.key : pjKeyVal;
             pipjVal = pjpiVal + (boostVal1);
             upperPjVal = pjpiVal - (boostVal1);
             lowerPjVal = pipjVal + (boostVal2);
-
-            piVal = (pipjVal + pjpiVal) / 2f;
-            piNode = new RegionNode(piSite, piVal);
 
             if (piVal == pipjVal || piVal == pjpiVal)
                 Console.WriteLine("Pi value is equal to pipj value in insertAndSplit.");
 
             // pj = internal pjpi;
-            breakPtY = yOnParabFromSiteAndX(pjSite, piSite.Y, piSite.X);
-            breakPt = new Vector2(piSite.X, breakPtY);
-
             pjpiHE = makeDanglingEdge(breakPt, voronoiDCEL); //left edge
             pipjHE = makeDanglingEdge(breakPt, voronoiDCEL); //right edge
 
             setHENextPrev(pipjHE.Twin, pjpiHE);
             setHENextPrev(pjpiHE.Twin, pipjHE);
+            voronoiDCEL.doesHalfEdgeDefineSiteFace(pjSite, pipjHE.Twin);
+            voronoiDCEL.doesHalfEdgeDefineSiteFace(piSite, pjpiHE.Twin);
 
             regionDuo = new List<Vector2> { pjSite, piSite };
             pjArc.leafToInternal(regionDuo, pjpiHE);
+
+            piVal = (pipjVal + pjpiVal) / 2f;
+            piNode = new RegionNode(piSite, piVal);
 
             // pi.val = pjpiVal and insertion
             pjNode.key = pjpiVal;
@@ -682,6 +691,7 @@ namespace FortuneAlgo
             if (!circleEvent.circleEventIsActive)
                 return;
 
+            Console.WriteLine($"Handling valid CE {circleEvent}\n");
             float sweepCoord = circleEvent.weight;
             RBNode<RegionNode> squeezedNode = circleEvent.squeezedArcLeaf!;
             RegionNode squeezedArc = squeezedNode.obj;
@@ -729,7 +739,7 @@ namespace FortuneAlgo
             {
                 //2. update higher up internal node
                 // obj.regionSites.Contains(squeezedFocus)
-                while ( !(queryParentNode.obj.regionSites[updatedIdx] == squeezedFocus) && queryParentNode != null)
+                while (queryParentNode != null && !(queryParentNode.obj.regionSites[updatedIdx] == squeezedFocus)  )
 					queryParentNode = queryParentNode.parent;
 				
 				if(queryParentNode != null) 
@@ -757,9 +767,11 @@ namespace FortuneAlgo
 
             // 1. delete squeezedArc a and its parent
             beach.delete(squeezedArc.weight, squeezedArc);
+            //if (squeezedParent != null)
+            //    beach.delete(squeezedParent.key, squeezedParent.obj);
 
             // 3. detect future circle events involving new neighbors
-            if((squeezedPred != null) && (squeezedSucc != null) &&  (squeezedSuccSucc != null))
+            if ((squeezedPred != null) && (squeezedSucc != null) &&  (squeezedSuccSucc != null))
                 detectCircleEvent(squeezedPred, squeezedSucc, squeezedSuccSucc, sweepCoord, eventQueue, voronoiDCEL);
             if ((squeezedPredPred != null) && (squeezedPred != null) &&  (squeezedSucc != null))
                 detectCircleEvent(squeezedPredPred, squeezedPred, squeezedSucc, sweepCoord, eventQueue, voronoiDCEL);
@@ -806,16 +818,6 @@ namespace FortuneAlgo
             {
                 setHENextPrev(boundHEs[i - 1], boundHEs[i]);
             }
-
-            ///HalfEdge newLeft = makeEdge(endPos, startPos, voronoiDCEL);
-            // the newLeft is the start's prev
-            // setHENextPrev(newLeft, startHE);
-            // setHENextPrev(endHE, newLeft);
-
-            // new right should be isolated as they define clockwise rotation along box
-            // but should be joined later in cleanup
-            //setHENextPrev(newLeft.Twin, tempHE.Twin);
-            //setHENextPrev(startHE.Twin, newLeft.Twin);
         }
 
         /// <summary>
@@ -867,6 +869,7 @@ namespace FortuneAlgo
                 if(voronoiVerts.Contains(he.Origin) ^ voronoiVerts.Contains(he.getTarget()))
                 {
                     HalfEdge properHE = voronoiDCEL.isSharedVertex(he.Origin) ? he : he.Twin;
+                    // if the other vertex isn't shared, we must shoot other way, too 11/27
                     Vector2 ray = properHE.getRay();
                     Vector2 boxHit = diagramBox.getFirstIntersection(properHE.Origin.Position, ray);
                     Debug.Assert(boxHit != BBox.DNE);
@@ -930,7 +933,8 @@ namespace FortuneAlgo
         public DCEL fortuneAlgo(MaxHeap<VoronoiEvent> eventQueue, RedBlackTree<RegionNode> beach, bool debug = false)
         {
 			DCEL voronoiDCEL = new();
-            float eventY;
+            initFaces(voronoiDCEL);
+            float eventY = float.MaxValue;
             VoronoiEvent currEvent;
             int iters = 1;
             float minEventY = float.MaxValue;
@@ -944,27 +948,45 @@ namespace FortuneAlgo
                 currEvent = eventQueue.peekTopOfObjHeap();
 
                 if (currEvent.isSiteEvent())
+                {
                     handleSiteEvent(eventY, eventQueue, beach, voronoiDCEL);
-                else if(!currEvent.isSiteEvent() && currEvent.circleEventIsActive)
-                    handleCircleEvent(currEvent, eventQueue, beach, voronoiDCEL);
-
-                if (eventY < minEventY)
                     minEventY = eventY;
+                }
+                else if (!currEvent.isSiteEvent() && currEvent.circleEventIsActive)
+                {
+                    handleCircleEvent(currEvent, eventQueue, beach, voronoiDCEL);
+                    minEventY = eventY;
+                }
+
+                //if (eventY < minEventY)
+                   // minEventY = eventY;
                 eventQueue.extractHeadOfHeap();
                 iters++;
             }
 
             //3.Cleanup any remaining intermediate state via bounding box clipping
-            clipVoronoiDiagram(voronoiDCEL, beach, minEventY, this._bbox);
+            if(this._siteCount > 1)
+                clipVoronoiDiagram(voronoiDCEL, beach, minEventY, this._bbox);
+
             return voronoiDCEL;
+        }
+
+        // initialize DCEL Faces
+        private void initFaces(DCEL voronoiDCEL)
+        {
+            for (int s = 0; s < _siteCount; s++)
+            {
+                Face siteFace = new Face();
+                siteFace.Position = this._sites[s];
+                siteFace.Tag = s;
+                voronoiDCEL.Add(siteFace);
+            }
         }
 
         // initialize eventQueueLine
 		// sort by events maximal Y then by X
-        public MaxHeap<VoronoiEvent> initEventQueue(List<Vector2> sites)
+        private MaxHeap<VoronoiEvent> initEventQueue(List<Vector2> sites)
         {
-            this._sites = sites;
-            this._siteCount = sites.Count;
             List<Vector2> orderedSites = new List<Vector2>(sites);
             List<VoronoiEvent> events = new List<VoronoiEvent>();
             // sort by minimal y then by x
@@ -976,6 +998,9 @@ namespace FortuneAlgo
 
             // reverse to be maximal y
             orderedSites.Reverse();
+            this._sites = orderedSites;
+            this._siteCount = sites.Count;
+
             VoronoiEvent ev = null!;
             MaxHeap<VoronoiEvent> pq = new MaxHeap<VoronoiEvent>();
             foreach (Vector2 site in orderedSites)
@@ -991,7 +1016,7 @@ namespace FortuneAlgo
         // what is stored in the beachline is the main variation
         // with Fortune's Algorithm. Helpful for cases where multiple
 		// beginning sites are within a certain y-value of each other.
-        public RedBlackTree<RegionNode> initBeachSO()
+        private RedBlackTree<RegionNode> initBeachSO()
         {
             // handle edge cases where several starting
             // points are within a certain range TODO 11/12
@@ -1004,8 +1029,8 @@ namespace FortuneAlgo
             DCEL vorDCEL = null!;
 
             //test inits
-            List<Vector2> sites1 = new List<Vector2> { new Vector2(358, 168), new Vector2(464, 389), new Vector2(758, 590), new(682, 254) };
-            MaxHeap<VoronoiEvent> eventQueue = initEventQueue(sites1);
+            List<Vector2> sites = new List<Vector2> { new(142, 600), new(450, 521), new(683, 442), new(385, 285) };
+            MaxHeap<VoronoiEvent> eventQueue = initEventQueue(sites);
             RedBlackTree<RegionNode> beach = initBeachSO();
 
             // 11/18...TO TEST
@@ -1015,6 +1040,7 @@ namespace FortuneAlgo
             // 11/25... further clip the diagram
             // if necessary to display in a bounding box.
             VoronoiDiagram voronoiDiagram = new(this._sites, vorDCEL, this._bbox);
+            DCEL visibleDCEL = voronoiDiagram.clipVDToBBox(this._bbox);
             return;
         }
     }

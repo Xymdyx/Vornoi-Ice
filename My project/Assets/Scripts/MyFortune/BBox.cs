@@ -289,7 +289,7 @@ namespace FortuneAlgo
             return false;
         }
         /// get enum value for a query pt
-        private boxBorders grabBorderValueOfPoint(Vector2 query)
+        public boxBorders grabBorderValueOfPoint(Vector2 query)
         {
             if (!isOnBoxBorders(query))
                 return boxBorders.NONE;

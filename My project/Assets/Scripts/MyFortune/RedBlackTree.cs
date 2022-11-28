@@ -623,7 +623,7 @@ namespace FortuneAlgo
                         if(!printObj)
                             Console.Write($"{nodes[i].key}:{col} ");
                         else
-                            Console.Write($"{nodes[i].obj}:{col}  ");
+                            Console.Write($"{nodes[i].obj}:(({col}))  ");
 
                     }
                     else

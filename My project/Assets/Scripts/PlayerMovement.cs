@@ -62,6 +62,15 @@ public class PlayerMovement : MonoBehaviour
         return;
     }
 
+    void constructPrompt()
+    {
+        if (this.vContact != null && this.vContact.canConstructVD() &&
+            Input.GetKeyDown("e"))
+        {
+            vContact.makeVoronoiDiagram();
+        }
+    }
+
     // Update is called once per frame
     void Update()
     {
@@ -83,7 +92,7 @@ public class PlayerMovement : MonoBehaviour
         if (move.magnitude > 0)
         {
             uiMgr.updateText("");
-            if (vContact)
+            if (vContact && !vContact.canConstructVD())
                 uiMgr.updateText($"On Voronoi Surface: {vContact.name}. Stop to plant");
         }
 
@@ -97,10 +106,15 @@ public class PlayerMovement : MonoBehaviour
             plantSeed();
         }
 
-
+        if (this.vContact != null && this.vContact.canConstructVD())
+        {
+            uiMgr.updateText("Press E to Construct a Voronoi Diagram");
+            constructPrompt();
+        }
         //gravity
         velo.y += grav * Time.deltaTime;
         controller.Move(velo * Time.deltaTime);
+
 
         return;
     }
