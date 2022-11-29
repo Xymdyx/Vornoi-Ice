@@ -48,7 +48,7 @@ public class PlayerMovement : MonoBehaviour
      */
     void plantSeed()
     {
-        if( vContact != null && isGrounded && Input.GetKeyDown("f") )
+        if( vContact != null && vContact.IsEnabled && isGrounded && Input.GetKeyDown("f") )
         {
             //get point
             Vector3 plantPt = this.transform.position;
@@ -62,12 +62,15 @@ public class PlayerMovement : MonoBehaviour
         return;
     }
 
+    // notify the player that they can construct the VD when they want to.
     void constructPrompt()
     {
         if (this.vContact != null && this.vContact.canConstructVD() &&
             Input.GetKeyDown("e"))
         {
             vContact.makeVoronoiDiagram();
+            uiMgr.updateText("Gander at it for a bit");
+            uiMgr.updateUpperText("Re-enabling will happen later on");
         }
     }
 
@@ -96,11 +99,12 @@ public class PlayerMovement : MonoBehaviour
                 uiMgr.updateText($"On Voronoi Surface: {vContact.name}. Stop to plant");
         }
 
-        if (Input.GetButtonDown("Jump") && isGrounded) // default jump is "Space".. send position to current ice square to leave crack
+        // default jump is "Space".. send position to current ice square to leave crack
+        if (Input.GetButtonDown("Jump") && isGrounded) 
             velo.y = Mathf.Sqrt(jumpHgt * downVal * grav); // jh= sqrt( height * -2f * g)
 
         // allow player to plant when still on Voronoi Surface
-        if(isGrounded && move.magnitude == 0 && vContact)
+        if(isGrounded && move.magnitude == 0 && vContact && vContact.IsEnabled)
         {
             uiMgr.updateText($"Press F to plant seed on {vContact.name}");
             plantSeed();
@@ -108,9 +112,10 @@ public class PlayerMovement : MonoBehaviour
 
         if (this.vContact != null && this.vContact.canConstructVD())
         {
-            uiMgr.updateText("Press E to Construct a Voronoi Diagram");
+            uiMgr.updateUpperText("Press E to Construct a Voronoi Diagram");
             constructPrompt();
         }
+
         //gravity
         velo.y += grav * Time.deltaTime;
         controller.Move(velo * Time.deltaTime);

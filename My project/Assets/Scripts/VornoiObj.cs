@@ -16,20 +16,26 @@ using VoronoiLib;
 using Unity.VisualScripting;
 using UnityEditor;
 
+// https://docs.unity3d.com/ScriptReference/LineRenderer.html
 public class VornoiObj : MonoBehaviour
 {
     private List<Vector3> seeds; //list of Vornoi seeds
     private bool isEnabled;
     private bool isRealTime;
     private Material crackShader;
+    private Material seedShader;
 
     private List<Color> seedColors; //if I want to color the patches
-    public LinkedList<VEdge> VoronoiEdges { get; private set; }
     private Vector2 upperRight;
     private Vector2 lowerLeft;
     private Color voronoiColor;
     private List<LineRenderer> vorLines;
-    private const float LINEWIDTH = .25F;
+    private List<LineRenderer> vorSites;
+    private const float LINEWIDTH = .15F;
+    [Range(6, 60)] public int lineCount;
+
+    public LinkedList<VEdge> VoronoiEdges { get; private set; }
+    public bool IsEnabled { get => isEnabled; private set => isEnabled = value; }
 
     // Start is called before the first frame update
     void Start()
@@ -48,10 +54,54 @@ public class VornoiObj : MonoBehaviour
         lowerLeft = new(minX, minZ);
         voronoiColor = this.GetComponent<Renderer>().material.color;
         vorLines = new List<LineRenderer>();
+        vorSites = new List<LineRenderer>();
         crackShader = Resources.Load("textures/Crack-Material", typeof(Material)) as Material;
+        seedShader = Resources.Load("textures/Seed-Material", typeof(Material)) as Material;
+
         VoronoiEdges = null!;
     }
 
+    // draw a new seed by making a circle with LineRenderer
+    // https://stackoverflow.com/questions/13708395/how-can-i-draw-a-circle-in-unity3d
+    // try bottom answer
+    private void addSeedCircle(Vector3 seed, float r = .5f)
+    {
+        float thetaScale = 0.01f;  // Circle resolution
+        int size = (int) ((1f / thetaScale) + 1f);
+
+        GameObject child = new GameObject();
+        child.transform.SetParent(this.transform);
+        LineRenderer lineRenderer = child.AddComponent<LineRenderer>();
+        float seedY = this.GetComponent<Renderer>().bounds.max.y;
+        lineRenderer.useWorldSpace = true;
+        lineRenderer.loop = true;
+
+        if (seedShader != null)
+            lineRenderer.material = seedShader;
+
+        lineRenderer.startColor = Color.blue ;
+        lineRenderer.endColor = Color.blue;
+        lineRenderer.startWidth = LINEWIDTH;
+        lineRenderer.endWidth = LINEWIDTH;
+        lineRenderer.positionCount = this.lineCount;
+        lineRenderer.material = this.seedShader;
+
+        float theta = (2f * Mathf.PI * thetaScale) / this.lineCount;
+        float angle = 0;
+        for (int i = 0; i < this.lineCount; i++ )
+        {
+            // there's a Mathf library...11/28
+            angle += theta;
+            float x = (r * Mathf.Cos(angle));
+            float z = (r * Mathf.Sin(angle));
+
+            Vector3 pos = new Vector3(x, seed.y, z);
+            lineRenderer.SetPosition(i, pos);
+            i += 1;
+        }
+    }
+
+    // helper method to plant seeds
     public void printSeeds() 
     {
         if(seeds == null || seeds.Count == 0)
@@ -72,31 +122,26 @@ public class VornoiObj : MonoBehaviour
     /*Method used to add Vornoi seeds if they aren't already in the list*/
     public void addSeed(Vector3 seedPos, bool debug = true)
     {
-        if (seeds == null)
+
+        if (this.isEnabled)
         {
-            seeds = new List<Vector3>();
-            seeds.Add(seedPos);
+            if (seeds == null)
+            {
+                seeds = new List<Vector3>();
+            }
+
+            if (!seeds.Contains(seedPos))
+            {
+                seeds.Add(seedPos);
+                //this.addSeedCircle(seedPos);
+            }
+            if (debug)
+                printSeeds();
         }
-        else if (!seeds.Contains(seedPos))
-            seeds.Add(seedPos);
-
-        if(debug)
-            printSeeds();
-
-        Camera cam = Camera.main;
-        Vector3 min = GetComponent<Renderer>().bounds.min;
-        Vector3 max = GetComponent<Renderer>().bounds.max;
-        Vector3 screenMin = cam.WorldToScreenPoint(min);
-        Vector3 screenMax = cam.WorldToScreenPoint(max);
-        int screenWidth = (int)(screenMax.x - screenMin.x);
-        int screenHeight = (int)(screenMax.y - screenMin.y);
-        int screenDepth = (int)(screenMax.z - screenMin.z);
-
-        Debug.Log($"VorObj pix dims are w = {screenWidth}, h = {screenHeight}, d = {screenDepth}");
-
         return;
     }
 
+    // determine if this can have seeds planted on it or not
     private void setisEnabled(bool setting)
     {
         this.isEnabled = setting;
@@ -156,9 +201,6 @@ public class VornoiObj : MonoBehaviour
         Vector3 max = renderer.bounds.max;
         Vector3 screenMin = cam.WorldToScreenPoint(min);
         Vector3 screenMax = cam.WorldToScreenPoint(max);
-        int screenWidth = (int) (screenMax.x - screenMin.x);
-        int screenHeight = (int) (screenMax.y - screenMin.y);
-        int screenDepth = (int) (screenMax.z - screenMin.z);
         float seedHeight = max.y;
 
         vorLines = new(VoronoiEdges.Count - 1);
@@ -190,11 +232,44 @@ public class VornoiObj : MonoBehaviour
         return;
     }
 
+    // set visibility of the Voronoi Edges
+    public void showVoronoiDiagram(bool isVisible = false)
+    {
+        foreach (LineRenderer line in vorLines)
+            line.enabled = isVisible;
+
+        return;
+    }
+
+    // set visibility of the Voronoi seeds/sites
+    public void showVoronoiSeeds(bool isVisible = true)
+    {
+        foreach (LineRenderer site in vorSites)
+            site.enabled = false;
+
+        return;
+    }
+
     // destroy the lines we drew and release them into memory
     // clear out the Voronoi Edges as well.
-    public bool freeVoronoiDiagram()
+    public void freeVoronoiSites()
     {
-        foreach(LineRenderer line in vorLines)
+        foreach (LineRenderer site in vorSites)
+        {
+            site.enabled = false;
+            GameObject.Destroy(site);
+        }
+
+        this.vorSites.Clear();
+        this.seeds.Clear();
+        setisEnabled(true);
+    }
+
+    // destroy the lines we drew and release them into memory
+    // clear out the Voronoi Edges as well.
+    public void freeVoronoiDiagram()
+    {
+        foreach (LineRenderer line in vorLines)
         {
             line.enabled = false;
             GameObject.Destroy(line);
@@ -203,15 +278,17 @@ public class VornoiObj : MonoBehaviour
         this.vorLines.Clear();
         this.VoronoiEdges.Clear();
         setisEnabled(true);
-        return true;
+        return;
     }
 
-    public bool showVoronoiDiagram(bool isVisible = false)
+    // free all the linerenderers for edges and sites and
+    // make the Voronoi Object ineractive again.
+    public bool freeAllVD()
     {
-        foreach (LineRenderer line in vorLines)
-            line.enabled = isVisible;
+        freeVoronoiDiagram();
+        freeVoronoiSites();
 
-        return true;
+        return this.VoronoiEdges.Count == 0 && this.seeds.Count == 0;
     }
 
     // Update is called once per frame
@@ -220,3 +297,13 @@ public class VornoiObj : MonoBehaviour
         
     }
 }
+//Camera cam = Camera.main;
+//Vector3 min = GetComponent<Renderer>().bounds.min;
+//Vector3 max = GetComponent<Renderer>().bounds.max;
+//Vector3 screenMin = cam.WorldToScreenPoint(min);
+//Vector3 screenMax = cam.WorldToScreenPoint(max);
+//int screenWidth = (int)(screenMax.x - screenMin.x);
+//int screenHeight = (int)(screenMax.y - screenMin.y);
+//int screenDepth = (int)(screenMax.z - screenMin.z);
+
+//Debug.Log($"VorObj pix dims are w = {screenWidth}, h = {screenHeight}, d = {screenDepth}");
