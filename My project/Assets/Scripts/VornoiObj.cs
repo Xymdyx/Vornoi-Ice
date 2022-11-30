@@ -4,6 +4,8 @@ desc: area that the player can make a Vornoi diagram on. Has a "Vornoi" tag
 author: Sam Ford
 date: 9/9/22
 due: 11/22
+https://github.com/Zalgo2462/VoronoiLib credit to Zalgo4626 while I repair my
+Fortune algo implementation 
  */
 using System.Collections;
 using System.Collections.Generic;
@@ -28,11 +30,19 @@ public class VornoiObj : MonoBehaviour
     private List<Color> seedColors; //if I want to color the patches
     private Vector2 upperRight;
     private Vector2 lowerLeft;
+    private float surfaceY;
     private Color voronoiColor;
     private List<LineRenderer> vorLines;
     private List<LineRenderer> vorSites;
-    private const float LINEWIDTH = .15F;
-    [Range(6, 60)] public int lineCount;
+
+    [Range(.01f, 1f)]
+    public float EdgeWidth;
+
+    [Range(.01f, 1f)]
+    public float SeedWidth;
+
+    [Range(6, 60)] 
+    public int lineCount;
 
     public LinkedList<VEdge> VoronoiEdges { get; private set; }
     public bool IsEnabled { get => isEnabled; private set => isEnabled = value; }
@@ -50,6 +60,7 @@ public class VornoiObj : MonoBehaviour
         float maxX = selfVolume.bounds.max.x;
         float minZ = selfVolume.bounds.min.z;
         float minX = selfVolume.bounds.min.x;
+        this.surfaceY = selfVolume.bounds.max.y;
         upperRight = new(maxX, maxZ);
         lowerLeft = new(minX, minZ);
         voronoiColor = this.GetComponent<Renderer>().material.color;
@@ -61,44 +72,26 @@ public class VornoiObj : MonoBehaviour
         VoronoiEdges = null!;
     }
 
-    // draw a new seed by making a circle with LineRenderer
+    // draw a new seed by making a ring with LineRenderer
     // https://stackoverflow.com/questions/13708395/how-can-i-draw-a-circle-in-unity3d
     // try bottom answer
     private void addSeedCircle(Vector3 seed, float r = .5f)
     {
-        float thetaScale = 0.01f;  // Circle resolution
-        int size = (int) ((1f / thetaScale) + 1f);
-
-        GameObject child = new GameObject();
+        //float groundY = this.GetComponent<Renderer>().bounds.max.y;
+        //Vector3 groundVec = new(seed.x, seed.y, seed.z);
+        int seedNum = this.vorSites.Count;
+        string seedName = $"VorSeed-{seedNum}";
+        GameObject child = new GameObject(seedName);
+        SeedDraw seedScript = child.AddComponent<SeedDraw>();
+        seedScript.enabled = true;
+        seedScript.StartSeed(this.lineCount, this.SeedWidth);
+        seedScript.transform.position = seed;
         child.transform.SetParent(this.transform);
-        LineRenderer lineRenderer = child.AddComponent<LineRenderer>();
-        float seedY = this.GetComponent<Renderer>().bounds.max.y;
-        lineRenderer.useWorldSpace = true;
-        lineRenderer.loop = true;
+        LineRenderer lineRenderer = child.GetComponent<LineRenderer>();
 
-        if (seedShader != null)
-            lineRenderer.material = seedShader;
-
-        lineRenderer.startColor = Color.blue ;
-        lineRenderer.endColor = Color.blue;
-        lineRenderer.startWidth = LINEWIDTH;
-        lineRenderer.endWidth = LINEWIDTH;
-        lineRenderer.positionCount = this.lineCount;
-        lineRenderer.material = this.seedShader;
-
-        float theta = (2f * Mathf.PI * thetaScale) / this.lineCount;
-        float angle = 0;
-        for (int i = 0; i < this.lineCount; i++ )
-        {
-            // there's a Mathf library...11/28
-            angle += theta;
-            float x = (r * Mathf.Cos(angle));
-            float z = (r * Mathf.Sin(angle));
-
-            Vector3 pos = new Vector3(x, seed.y, z);
-            lineRenderer.SetPosition(i, pos);
-            i += 1;
-        }
+        this.vorSites.Add(lineRenderer);
+        seedScript.setSeedShader(this.seedShader);
+        seedScript.DrawSiteCircle();
     }
 
     // helper method to plant seeds
@@ -133,7 +126,7 @@ public class VornoiObj : MonoBehaviour
             if (!seeds.Contains(seedPos))
             {
                 seeds.Add(seedPos);
-                //this.addSeedCircle(seedPos);
+                this.addSeedCircle(seedPos);
             }
             if (debug)
                 printSeeds();
@@ -180,7 +173,8 @@ public class VornoiObj : MonoBehaviour
 
         setisEnabled(false);
         Debug.Log("Drawing VD!");
-        drawVoronoiDiagram();
+        //https://github.com/Zalgo2462/VoronoiLib credit to Zalgo4626 while I repair my implementation
+        drawVoronoiDiagram(); 
         return true;
     }
 
@@ -190,8 +184,6 @@ public class VornoiObj : MonoBehaviour
         Console.WriteLine("Attempt to draw Voronoi Diagram from sites: ");
         printSeeds();
         Renderer renderer = GetComponent<Renderer>();
-
-        //int newDepth = this.upperRight.y;
 
         if (VoronoiEdges == null || VoronoiEdges.Count == 0)
             return;
@@ -204,7 +196,7 @@ public class VornoiObj : MonoBehaviour
         float seedHeight = max.y;
 
         vorLines = new(VoronoiEdges.Count - 1);
-        //Texture3D vorTexture = new(screenWidth, screenHeight, screenDepth, TextureFormat.ARGB32, false);
+        int lineNum = 1;
         foreach( VEdge edge in VoronoiEdges)
         {
             float startX = (float) edge.Start.X;
@@ -213,7 +205,8 @@ public class VornoiObj : MonoBehaviour
             float endZ = (float)edge.End.Y;
             Vector3 start = new(startX, seedHeight, startZ);
             Vector3 end = new(endX, seedHeight, endZ);
-            GameObject child = new GameObject();
+            string edgeStr = $"VorEdge-{lineNum}";
+            GameObject child = new GameObject(edgeStr);
             child.transform.SetParent(this.transform);
             LineRenderer newLine = child.AddComponent<LineRenderer>();
             newLine.SetPosition(0, start);
@@ -224,9 +217,10 @@ public class VornoiObj : MonoBehaviour
                 Debug.Log("Assigning shader to voronoi line");
                 newLine.material = crackShader;
             }
-            newLine.startWidth = LINEWIDTH ; newLine.endWidth = LINEWIDTH;
+            newLine.startWidth = this.EdgeWidth ; newLine.endWidth = this.EdgeWidth;
             newLine.startColor = Color.black; newLine.endColor = Color.black;
             vorLines.Add(newLine);
+
         }
 
         return;

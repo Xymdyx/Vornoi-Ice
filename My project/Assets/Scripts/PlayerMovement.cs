@@ -124,9 +124,11 @@ public class PlayerMovement : MonoBehaviour
         return;
     }
 
-    /*Trigger message specific to CharacterController objects.
+    /*
+     * Trigger message specific to CharacterController objects.
      CharacterControllers simplify collisions to not need rigid bodies,
-    so other stuff isn't needed*/
+    so other stuff isn't needed
+    */
     private void OnControllerColliderHit(ControllerColliderHit hit)
     {
         GameObject go = hit.gameObject;
