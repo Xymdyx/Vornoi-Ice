@@ -22,9 +22,11 @@ public class PlayerMovement : MonoBehaviour
     public float grav = -9.81f;
     Vector3 velo;
 
+
+    //used in Editor to check if a collided obj is in the "GroundCheck" layer
+    public LayerMask groundMask;
     public Transform groundCheck;
     public float groundDist = 0.4f;
-    public LayerMask groundMask; //used in Editor to check if a collided obj is in the "GroundCheck" layer
     private bool isGrounded;
     private float downVal = -2f;
     public float jumpHgt = 3f;
@@ -34,10 +36,17 @@ public class PlayerMovement : MonoBehaviour
     private VornoiObj vContact;
     UIManager uiMgr;
 
+    // needed for camera switching
+    private Camera fpCam;
+    private Camera overHeadCam;
+    private bool isFPActive = true;
+    private MeshRenderer playerModel;
+
     // control key strings
     private const string plantKey = "f";
     private const string constructKey = "e";
     private const string clearKey = "c";
+    private const string switchCamKey = "q";
 
     // jump message
     private const string jumpMsg = "Oh, you're airborne! Have fun ";
@@ -63,9 +72,12 @@ public class PlayerMovement : MonoBehaviour
     // suggestion message
     private const string lookMsg = "Gander at it for a bit ";
 
+    // switch camera message
+    private const string switchOHMsg = "Press and release Q to switch to overhead view";
+    private const string switchFPMsg = "Press and release Q to return to FP View";
+
     // future update message
     private const string futureUpdateMsg = "Overhead Camera will happen later on ";
-
 
 
     void Start()
@@ -74,6 +86,16 @@ public class PlayerMovement : MonoBehaviour
         onVornoi = false;
         vContact = null;
         uiMgr = GameObject.FindObjectOfType<UIManager>();
+        overHeadCam = GameObject.Find("OverHead-Cam").GetComponent<Camera>();
+        fpCam = this.GetComponentInChildren<Camera>();
+        this.playerModel = this.GetComponentInChildren<MeshRenderer>();
+
+        if (fpCam == null)
+            Debug.Log("FP Cam doesn't exist yet");
+        if (overHeadCam == null)
+            Debug.Log("OverHead doesn't exist yet");
+        if (playerModel == null)
+            Debug.Log("Player model doesn't exist yet");
     }
 
     /*
@@ -113,7 +135,7 @@ public class PlayerMovement : MonoBehaviour
     void clearPrompt()
     {
         if(this.vContact != null && !this.vContact.IsEnabled &&
-            Input.GetKeyUp(clearKey))
+            Input.GetKeyUp(clearKey) && this.isFPActive)
         {
             bool successReset = vContact.freeAllVD();
             if (successReset)
@@ -128,64 +150,130 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
+    // method to switch to secondary overhead view
+    void switchToOHCam()
+    {
+        if (isFPActive)
+        {
+            this.fpCam.enabled = false;
+            this.overHeadCam.enabled = true;
+            // make player model invisible
+            if (playerModel != null)
+            {
+                playerModel.enabled = false;
+            }
+
+            this.isFPActive = false;
+        }
+    }
+
+    // method to allow user to return to first-person view
+    void switchToFPCam()
+    {
+        if (!isFPActive)
+        {
+            this.overHeadCam.enabled = false;
+            this.fpCam.enabled = true;
+
+            // make player model visible
+            if (playerModel != null)
+            {
+                playerModel.enabled = true;
+            }
+
+            this.isFPActive = true;
+        }
+    }
+
+    // notify the player that they can switch their POV
+    // only once a Voronoi Diagram has been constructed
+    void switchViewPrompt()
+    {
+        if(this.vContact != null && !this.vContact.IsEnabled
+            && Input.GetKeyUp(switchCamKey))
+        {
+            if (isFPActive)
+                switchToOHCam();
+            else
+                switchToFPCam();
+        }
+    }
+
     // Update is called once per frame
     void Update()
     {
-        isGrounded = Physics.CheckSphere(groundCheck.position, groundDist, groundMask);
-        bool areSeedsFull = false;
-
-        if (vContact)
-            areSeedsFull = vContact.seedsFull();
-
-        if(areSeedsFull)
-            uiMgr.updateText(maxSeedsMsg + $"{VornoiObj.seedMax} max achieved!");
-
-        //forces us down onto ground
-        if (isGrounded && velo.y < 0)
-            velo.y = downVal; 
-
-        if(!isGrounded)
-            uiMgr.updateText(jumpMsg);
-
-        float x = Input.GetAxis("Horizontal");
-        float z = Input.GetAxis("Vertical");
-
-        //move along xz
-        Vector3 move = transform.right * x + transform.forward * z;
-        controller.Move(move * spd * Time.deltaTime);
-
-        // if the player is moving on the ground
-        if (move.magnitude > 0 && isGrounded && !areSeedsFull)
+        // we only want to do this stuff if we're in first person
+        if (isFPActive) 
         {
-            uiMgr.updateText("");
-            if (vContact && !vContact.canConstructVD())
-                uiMgr.updateText(surfaceNoticeMsg + vContact.name + stopPlantMsg);
+            isGrounded = Physics.CheckSphere(groundCheck.position, groundDist, groundMask);
+            bool areSeedsFull = false;
+
+            if (vContact)
+                areSeedsFull = vContact.seedsFull();
+
+            if (areSeedsFull)
+                uiMgr.updateText(maxSeedsMsg + $"{VornoiObj.seedMax} max achieved!");
+
+            //forces us down onto ground
+            if (isGrounded && velo.y < 0)
+                velo.y = downVal;
+
+            if (!isGrounded)
+                uiMgr.updateText(jumpMsg);
+
+            float x = Input.GetAxis("Horizontal");
+            float z = Input.GetAxis("Vertical");
+
+            //move along xz
+            Vector3 move = transform.right * x + transform.forward * z;
+            controller.Move(move * spd * Time.deltaTime);
+
+            // if the player is moving on the ground
+            if (move.magnitude > 0 && isGrounded && !areSeedsFull)
+            {
+                uiMgr.updateText("");
+                if (vContact && !vContact.canConstructVD())
+                    uiMgr.updateText(surfaceNoticeMsg + vContact.name + stopPlantMsg);
+            }
+
+            // default jump is "Space"
+            if (Input.GetButtonDown("Jump") && isGrounded)
+            {
+                velo.y = Mathf.Sqrt(jumpHgt * downVal * grav); // jh= sqrt( height * -2f * g)
+            }
+
+            // allow player to plant when still on Voronoi Surface
+            if (isGrounded && move.magnitude == 0
+                && vContact && vContact.IsEnabled && !areSeedsFull)
+            {
+                uiMgr.updateText(plantMsg + vContact.name);
+                plantSeed();
+            }
+
+            if (this.vContact != null && this.vContact.canConstructVD())
+            {
+                uiMgr.updateUpperText(constructMsg);
+                constructPrompt();
+            }
+
         }
 
-        // default jump is "Space"
-        if (Input.GetButtonDown("Jump") && isGrounded)
-        {
-            velo.y = Mathf.Sqrt(jumpHgt * downVal * grav); // jh= sqrt( height * -2f * g)
-        }
-
-        // allow player to plant when still on Voronoi Surface
-        if(isGrounded && move.magnitude == 0
-            && vContact && vContact.IsEnabled && !areSeedsFull)
-        {
-            uiMgr.updateText(plantMsg + vContact.name);
-            plantSeed();
-        }
-
-        if (this.vContact != null && this.vContact.canConstructVD())
-        {
-            uiMgr.updateUpperText(constructMsg);
-            constructPrompt();
-        }
-
+        // we always want to prompt for these after a VD is made
         if(this.vContact != null && !this.vContact.IsEnabled)
         {
-            uiMgr.updateText(clearMsg);
-            clearPrompt();
+            if (isFPActive)
+            {
+                uiMgr.updateUpperText(switchOHMsg);
+                switchViewPrompt();
+                uiMgr.updateText(clearMsg);
+                clearPrompt();
+            }
+            else
+            {
+                uiMgr.updateUpperText(switchFPMsg);
+                uiMgr.updateText("");
+                switchViewPrompt();
+            }
         }
 
         //gravity

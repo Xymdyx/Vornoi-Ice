@@ -23,12 +23,6 @@ public class CameraLook : MonoBehaviour
     }
 
 
-    //update the camera view for reconstruct mode. Perhaps a separate camera?
-    void updateView()
-    {
-
-    }
-
     // Update is called once per frame
     void Update()
     {
