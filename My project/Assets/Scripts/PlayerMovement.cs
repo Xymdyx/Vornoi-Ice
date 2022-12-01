@@ -34,6 +34,39 @@ public class PlayerMovement : MonoBehaviour
     private VornoiObj vContact;
     UIManager uiMgr;
 
+    // control key strings
+    private const string plantKey = "f";
+    private const string constructKey = "e";
+    private const string clearKey = "c";
+
+    // jump message
+    private const string jumpMsg = "Oh, you're airborne! Have fun ";
+
+    // plant messages
+    private const string plantMsg = "Press F to plant seed on ";
+    private const string stopPlantMsg = " Stop to plant ";
+    private const string maxSeedsMsg = "Planted max seeds. ";
+    // surface messages
+    private const string surfaceNoticeMsg = "On Voronoi Surface: ";
+
+    // construct message
+    private const string constructMsg = "Press E to Construct a Voronoi Diagram ";
+
+    // clear message
+    private const string clearMsg = "Press and release C to clear current Voronoi Diagram ";
+
+    // reset messages
+    private const string resetSuccessMsg = "Rink reset successfully. Go plant again with F ";
+    private const string resetFailMsg = "Rink reset failed. Unable to construct another VD ";
+    private const string continueMsg = "Feel free to make another or exit the app ";
+
+    // suggestion message
+    private const string lookMsg = "Gander at it for a bit ";
+
+    // future update message
+    private const string futureUpdateMsg = "Overhead Camera will happen later on ";
+
+
 
     void Start()
     {
@@ -48,15 +81,17 @@ public class PlayerMovement : MonoBehaviour
      */
     void plantSeed()
     {
-        if( vContact != null && vContact.IsEnabled && isGrounded && Input.GetKeyDown("f") )
+        if( vContact != null && vContact.IsEnabled && isGrounded && Input.GetKeyDown(plantKey) )
         {
             //get point
             Vector3 plantPt = this.transform.position;
             Collider vBoundingVol = vContact.GetComponent<Collider>();
-           
             plantPt.y = vBoundingVol.bounds.max.y;
-            vContact.addSeed(plantPt);
-            Debug.Log($"Planted seed: {plantPt}");
+            bool added = vContact.addSeed(plantPt);
+
+            if (added)
+                Debug.Log($"Planted seed: {plantPt}");
+
         }
 
         return;
@@ -66,11 +101,30 @@ public class PlayerMovement : MonoBehaviour
     void constructPrompt()
     {
         if (this.vContact != null && this.vContact.canConstructVD() &&
-            Input.GetKeyDown("e"))
+            Input.GetKeyDown(constructKey))
         {
             vContact.makeVoronoiDiagram();
-            uiMgr.updateText("Gander at it for a bit");
-            uiMgr.updateUpperText("Re-enabling will happen later on");
+            uiMgr.updateText(lookMsg);
+            uiMgr.updateUpperText(futureUpdateMsg);
+        }
+    }
+
+    // notify the player when they can clear the current diagram and make another
+    void clearPrompt()
+    {
+        if(this.vContact != null && !this.vContact.IsEnabled &&
+            Input.GetKeyUp(clearKey))
+        {
+            bool successReset = vContact.freeAllVD();
+            if (successReset)
+            {
+                uiMgr.updateUpperText(resetSuccessMsg);
+                uiMgr.updateText(continueMsg);
+            }
+            else
+            {
+                uiMgr.updateUpperText(resetFailMsg);
+            }
         }
     }
 
@@ -78,12 +132,21 @@ public class PlayerMovement : MonoBehaviour
     void Update()
     {
         isGrounded = Physics.CheckSphere(groundCheck.position, groundDist, groundMask);
+        bool areSeedsFull = false;
+
+        if (vContact)
+            areSeedsFull = vContact.seedsFull();
+
+        if(areSeedsFull)
+            uiMgr.updateText(maxSeedsMsg + $"{VornoiObj.seedMax} max achieved!");
 
         //forces us down onto ground
         if (isGrounded && velo.y < 0)
             velo.y = downVal; 
 
-        
+        if(!isGrounded)
+            uiMgr.updateText(jumpMsg);
+
         float x = Input.GetAxis("Horizontal");
         float z = Input.GetAxis("Vertical");
 
@@ -91,35 +154,43 @@ public class PlayerMovement : MonoBehaviour
         Vector3 move = transform.right * x + transform.forward * z;
         controller.Move(move * spd * Time.deltaTime);
 
-        // if the player is moving
-        if (move.magnitude > 0)
+        // if the player is moving on the ground
+        if (move.magnitude > 0 && isGrounded && !areSeedsFull)
         {
             uiMgr.updateText("");
             if (vContact && !vContact.canConstructVD())
-                uiMgr.updateText($"On Voronoi Surface: {vContact.name}. Stop to plant");
+                uiMgr.updateText(surfaceNoticeMsg + vContact.name + stopPlantMsg);
         }
 
-        // default jump is "Space".. send position to current ice square to leave crack
-        if (Input.GetButtonDown("Jump") && isGrounded) 
+        // default jump is "Space"
+        if (Input.GetButtonDown("Jump") && isGrounded)
+        {
             velo.y = Mathf.Sqrt(jumpHgt * downVal * grav); // jh= sqrt( height * -2f * g)
+        }
 
         // allow player to plant when still on Voronoi Surface
-        if(isGrounded && move.magnitude == 0 && vContact && vContact.IsEnabled)
+        if(isGrounded && move.magnitude == 0
+            && vContact && vContact.IsEnabled && !areSeedsFull)
         {
-            uiMgr.updateText($"Press F to plant seed on {vContact.name}");
+            uiMgr.updateText(plantMsg + vContact.name);
             plantSeed();
         }
 
         if (this.vContact != null && this.vContact.canConstructVD())
         {
-            uiMgr.updateUpperText("Press E to Construct a Voronoi Diagram");
+            uiMgr.updateUpperText(constructMsg);
             constructPrompt();
+        }
+
+        if(this.vContact != null && !this.vContact.IsEnabled)
+        {
+            uiMgr.updateText(clearMsg);
+            clearPrompt();
         }
 
         //gravity
         velo.y += grav * Time.deltaTime;
         controller.Move(velo * Time.deltaTime);
-
 
         return;
     }

@@ -8,7 +8,7 @@ public class SeedDraw : MonoBehaviour
     // Start is called before the first frame update
     public LineRenderer lineRenderer;
     public int lineCount;
-    public const float r = .5f;
+    public const float r = .15f;
     private float width;
     private Material seedShader;
 

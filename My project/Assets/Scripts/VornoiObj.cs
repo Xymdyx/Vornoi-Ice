@@ -22,12 +22,15 @@ using UnityEditor;
 public class VornoiObj : MonoBehaviour
 {
     private List<Vector3> seeds; //list of Vornoi seeds
+
+    // imposing this limit as a safeguard
+    // since Unity cannot handle infinite game objects
+    public static  int seedMax = 300;
     private bool isEnabled;
     private bool isRealTime;
     private Material crackShader;
     private Material seedShader;
 
-    private List<Color> seedColors; //if I want to color the patches
     private Vector2 upperRight;
     private Vector2 lowerLeft;
     private float surfaceY;
@@ -50,10 +53,9 @@ public class VornoiObj : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        seeds = new List<Vector3>();
+        seeds = new List<Vector3>(seedMax);
         isEnabled = true;
         isRealTime = false;
-        seedColors = new List<Color>();
 
         Collider selfVolume = this.GetComponent<Collider>();
         float maxZ = selfVolume.bounds.max.z;
@@ -112,11 +114,17 @@ public class VornoiObj : MonoBehaviour
 
     }
 
-    /*Method used to add Vornoi seeds if they aren't already in the list*/
-    public void addSeed(Vector3 seedPos, bool debug = true)
+    // bool for checking if total seed capacity met
+    public bool seedsFull()
     {
+        return this.seeds.Count >= seedMax;
+    }
 
-        if (this.isEnabled)
+    /*Method used to add Vornoi seeds if they aren't already in the list*/
+    public bool addSeed(Vector3 seedPos, bool debug = false)
+    {
+        bool added = false;
+        if (this.isEnabled && !seedsFull())
         {
             if (seeds == null)
             {
@@ -127,11 +135,12 @@ public class VornoiObj : MonoBehaviour
             {
                 seeds.Add(seedPos);
                 this.addSeedCircle(seedPos);
+                added = true;
             }
             if (debug)
                 printSeeds();
         }
-        return;
+        return added;
     }
 
     // determine if this can have seeds planted on it or not
@@ -167,7 +176,7 @@ public class VornoiObj : MonoBehaviour
         VoronoiEdges = FortunesAlgorithm.Run(points, lowerLeft.x, lowerLeft.y, upperRight.x, upperRight.y);
         if (VoronoiEdges == null || VoronoiEdges.Count == 0)
         {
-            Console.WriteLine("Voronoi Diagram creation failed");
+            Debug.Log("Voronoi Diagram creation failed");
             return false;
         }
 
@@ -181,19 +190,12 @@ public class VornoiObj : MonoBehaviour
     // draws the Voronoi Diagram using lineRenderers
     public void drawVoronoiDiagram()
     {
-        Console.WriteLine("Attempt to draw Voronoi Diagram from sites: ");
+        Debug.Log("Attempt to draw Voronoi Diagram from sites: ");
         printSeeds();
         Renderer renderer = GetComponent<Renderer>();
 
         if (VoronoiEdges == null || VoronoiEdges.Count == 0)
             return;
-
-        Camera cam = Camera.main;
-        Vector3 min = renderer.bounds.min;
-        Vector3 max = renderer.bounds.max;
-        Vector3 screenMin = cam.WorldToScreenPoint(min);
-        Vector3 screenMax = cam.WorldToScreenPoint(max);
-        float seedHeight = max.y;
 
         vorLines = new(VoronoiEdges.Count - 1);
         int lineNum = 1;
@@ -203,8 +205,8 @@ public class VornoiObj : MonoBehaviour
             float startZ = (float) edge.Start.Y;
             float endX = (float)edge.End.X;
             float endZ = (float)edge.End.Y;
-            Vector3 start = new(startX, seedHeight, startZ);
-            Vector3 end = new(endX, seedHeight, endZ);
+            Vector3 start = new(startX, this.surfaceY, startZ);
+            Vector3 end = new(endX, this.surfaceY, endZ);
             string edgeStr = $"VorEdge-{lineNum}";
             GameObject child = new GameObject(edgeStr);
             child.transform.SetParent(this.transform);
@@ -220,14 +222,14 @@ public class VornoiObj : MonoBehaviour
             newLine.startWidth = this.EdgeWidth ; newLine.endWidth = this.EdgeWidth;
             newLine.startColor = Color.black; newLine.endColor = Color.black;
             vorLines.Add(newLine);
-
+            lineNum++;
         }
 
         return;
     }
 
     // set visibility of the Voronoi Edges
-    public void showVoronoiDiagram(bool isVisible = false)
+    private void showVoronoiEdges(bool isVisible = true)
     {
         foreach (LineRenderer line in vorLines)
             line.enabled = isVisible;
@@ -236,12 +238,19 @@ public class VornoiObj : MonoBehaviour
     }
 
     // set visibility of the Voronoi seeds/sites
-    public void showVoronoiSeeds(bool isVisible = true)
+    private void showVoronoiSeeds(bool isVisible = true)
     {
         foreach (LineRenderer site in vorSites)
-            site.enabled = false;
+            site.enabled = isVisible;
 
         return;
+    }
+
+    // set visibility of whole diagram
+    public void toggleVoronoi()
+    {
+        showVoronoiSeeds();
+        showVoronoiEdges();
     }
 
     // destroy the lines we drew and release them into memory
@@ -251,27 +260,28 @@ public class VornoiObj : MonoBehaviour
         foreach (LineRenderer site in vorSites)
         {
             site.enabled = false;
-            GameObject.Destroy(site);
+            site.transform.parent = null;
+            GameObject.Destroy(site, .01f); // this is not recommended in general
         }
 
         this.vorSites.Clear();
         this.seeds.Clear();
-        setisEnabled(true);
+        return;
     }
 
     // destroy the lines we drew and release them into memory
     // clear out the Voronoi Edges as well.
-    public void freeVoronoiDiagram()
+    public void freeVoronoiEdges()
     {
         foreach (LineRenderer line in vorLines)
         {
             line.enabled = false;
-            GameObject.Destroy(line);
+            line.transform.parent = null;
+            GameObject.Destroy(line, .01f);
         }
 
         this.vorLines.Clear();
         this.VoronoiEdges.Clear();
-        setisEnabled(true);
         return;
     }
 
@@ -279,17 +289,14 @@ public class VornoiObj : MonoBehaviour
     // make the Voronoi Object ineractive again.
     public bool freeAllVD()
     {
-        freeVoronoiDiagram();
+        freeVoronoiEdges();
         freeVoronoiSites();
+        bool successVal = this.VoronoiEdges.Count == 0 && this.seeds.Count == 0;
+        setisEnabled(successVal);
 
-        return this.VoronoiEdges.Count == 0 && this.seeds.Count == 0;
+        return successVal;
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
 }
 //Camera cam = Camera.main;
 //Vector3 min = GetComponent<Renderer>().bounds.min;
@@ -301,3 +308,7 @@ public class VornoiObj : MonoBehaviour
 //int screenDepth = (int)(screenMax.z - screenMin.z);
 
 //Debug.Log($"VorObj pix dims are w = {screenWidth}, h = {screenHeight}, d = {screenDepth}");
+
+//Vector3 min = renderer.bounds.min;
+//Vector3 max = renderer.bounds.max;
+//float seedHeight = max.y;
