@@ -34,11 +34,17 @@ public class VornoiObj : MonoBehaviour
     private Vector2 upperRight;
     private Vector2 lowerLeft;
     private float surfaceY;
+
+    [Range(.01f, .1f)]
+    public float seedYOffset;
+
     private Color voronoiColor;
     private List<LineRenderer> vorLines;
     private List<LineRenderer> vorSites;
 
-    [Range(.01f, 1f)]
+    // optimal crack width is .01
+    // optimal intermediate is .15f
+    [Range(.01f, .15f)]
     public float EdgeWidth;
 
     [Range(.01f, 1f)]
@@ -199,14 +205,15 @@ public class VornoiObj : MonoBehaviour
 
         vorLines = new(VoronoiEdges.Count - 1);
         int lineNum = 1;
-        foreach( VEdge edge in VoronoiEdges)
+        float lineY = this.surfaceY + this.seedYOffset;
+        foreach ( VEdge edge in VoronoiEdges)
         {
             float startX = (float) edge.Start.X;
             float startZ = (float) edge.Start.Y;
             float endX = (float)edge.End.X;
             float endZ = (float)edge.End.Y;
-            Vector3 start = new(startX, this.surfaceY, startZ);
-            Vector3 end = new(endX, this.surfaceY, endZ);
+            Vector3 start = new(startX, lineY, startZ);
+            Vector3 end = new(endX, lineY, endZ);
             string edgeStr = $"VorEdge-{lineNum}";
             GameObject child = new GameObject(edgeStr);
             child.transform.SetParent(this.transform);

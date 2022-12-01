@@ -773,11 +773,11 @@ MonoBehaviour:
   controller: {fileID: 867365461}
   spd: 8
   grav: -9.81
-  groundCheck: {fileID: 1815016360}
-  groundDist: 0.4
   groundMask:
     serializedVersion: 2
     m_Bits: 8
+  groundCheck: {fileID: 1815016360}
+  groundDist: 0.4
   jumpHgt: 1.5
 --- !u!1 &963194225
 GameObject:
@@ -1341,7 +1341,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 0, y: -3.0894012, z: -895.03394, w: 0}
+  m_margin: {x: 0, y: -3.0894012, z: -351.51807, w: -15.759308}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -1564,7 +1564,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 41e9f86a8e235664db18e418f0206d08, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  EdgeWidth: 0.015
+  seedYOffset: 0.0105
+  EdgeWidth: 0.15
   SeedWidth: 0.303
   lineCount: 60
 --- !u!54 &1935022354
@@ -1864,7 +1865,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 0, y: -3.0894012, z: -895.03394, w: 0}
+  m_margin: {x: 0, y: 9.681778, z: -432.9381, w: -42.913147}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -1958,15 +1959,15 @@ Camera:
     y: 0
     width: 1
     height: 1
-  near clip plane: 0.3
-  far clip plane: 1000
+  near clip plane: 0.01
+  far clip plane: 150
   field of view: 33.39849
   orthographic: 0
-  orthographic size: 22
+  orthographic size: 27
   m_Depth: 0
   m_CullingMask:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 2147483647
   m_RenderingPath: -1
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
