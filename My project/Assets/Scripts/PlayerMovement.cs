@@ -73,7 +73,7 @@ public class PlayerMovement : MonoBehaviour
     private const string lookMsg = "Gander at it for a bit ";
 
     // switch camera message
-    private const string switchOHMsg = "Press and release Q to switch to overhead view";
+    private const string switchOHMsg = "Press and release Q to go to overhead view";
     private const string switchFPMsg = "Press and release Q to return to FP View";
 
     // future update message
