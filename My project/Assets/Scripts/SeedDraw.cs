@@ -36,7 +36,7 @@ public class SeedDraw : MonoBehaviour
     }
 
     // Update is called once per frame
-    public void DrawSiteCircle()
+    public void DrawSiteCircle(float yOffset = .01f)
     {
         if (lineRenderer == null)
             return;
@@ -60,7 +60,7 @@ public class SeedDraw : MonoBehaviour
             float x = (r * Mathf.Cos(angle));
             float z = (r * Mathf.Sin(angle));
 
-            Vector3 pos = new Vector3(x, 0.01f, z) + this.transform.position;
+            Vector3 pos = new Vector3(x, yOffset, z) + this.transform.position;
             lineRenderer.SetPosition(i, pos);
             angle += theta;
         }

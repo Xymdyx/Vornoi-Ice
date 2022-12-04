@@ -99,7 +99,7 @@ public class VornoiObj : MonoBehaviour
 
         this.vorSites.Add(lineRenderer);
         seedScript.setSeedShader(this.seedShader);
-        seedScript.DrawSiteCircle();
+        seedScript.DrawSiteCircle(this.seedYOffset);
     }
 
     // helper method to plant seeds
