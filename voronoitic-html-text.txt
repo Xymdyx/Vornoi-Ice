@@ -34,7 +34,7 @@
 	</style>
 	<br>
 	<div id="project-desc" class="desc" >
-	<h2><a href="https://github.com/Xymdyx/Vornoi-Ice" target="_blank">Vornoitic</a> Description</h2>
+	<h2><a href="https://github.com/Xymdyx/Vornoi-Ice" target="_blank">Voronoitic</a> Description</h2>
 	<p>Voronoitic is a first-person game in which one can plant Voronoi seeds on an ice rink and then visualize a Voronoi Diagram (VD).</p>
 	<p>After construction, the player can look at the Voronoi Diagram from an overhead view or clear the current diagram and make a new one.</p>
 	<p>All online demos of VDs that I've seen don't allow users towalk on them so I thought I'd do it.</p>
@@ -49,7 +49,7 @@
 	</div>
 	
 	<div id="about" class="aboutVDs">
-	<h2>About Voronoi Diagrams</h2>
+	<h2><a href="https://en.wikipedia.org/wiki/Voronoi_diagram" target="_blank">About Voronoi Diagrams</a></h2>
 	<p>Voronoi Diagrams are plane partitions in which every dot defines a polygon of all other points closest to that dot. </p>
 	<p>The lines are equidistant to 2+ dots. The intersection of lines defines points equidistant to 3+ dots.</p>
 	<p>The <a href="https://en.wikipedia.org/wiki/Dual_graph" target="_blank"> planar dual</a> of a VD is a <a href="https://en.wikipedia.org/wiki/Delaunay_triangulation" target="_blank"> Delaunay Triangulation</a>.</p>
@@ -119,6 +119,3 @@
 	</div>
   </body>
 </html>
-
-
-
