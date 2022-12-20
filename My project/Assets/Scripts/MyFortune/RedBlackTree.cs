@@ -194,13 +194,14 @@ namespace FortuneAlgo
                         gp.color = 1;
                         el = gp;
                     }
-                    else if (p.right == el)
-                    { //if parent's right is el, leftRot el
-                        el = p;
-                        this._leftRot(el);
-                    }
-                    else
-                    { //in all other cases, color the parent black, grandparent red, rightRot gp
+                    else // changed because this is an error when I originally typed it -- 12/18
+					{
+						if (p.right == el)
+						{ //if parent's right is el, leftRot el
+							el = p;
+							this._leftRot(el);
+						}
+                    //in all other cases, color the parent black, grandparent red, rightRot gp
                         p.color = 0;
                         gp.color = 1;
                         this._rightRot(gp);
@@ -215,13 +216,14 @@ namespace FortuneAlgo
                         gp.color = 1;
                         el = gp;
                     }
-                    else if (p.left == el)
-                    { //if parent's left is el, rightRot el
-                        el = p;
-                        this._rightRot(el);
-                    }
-                    else
-                    { //in all other cases, color the parent black, grandparent black, leftRot gp
+                    else // changed because this is an error when I originally typed it -- 12/18
+					{
+						if (p.left == el)						
+						{ //if parent's left is el, rightRot el
+							el = p;
+							this._rightRot(el);
+						}
+                    //in all other cases, color the parent black, grandparent black, leftRot gp
                         p.color = 0;
                         gp.color = 1;
                         this._leftRot(gp);
@@ -279,15 +281,16 @@ namespace FortuneAlgo
                         sib.color = 1;
                         x = parent; //assign parent of x to x
                     }
-                    else if (sib.right.color == 0)
+                    else // changed because this is an error when I originally typed it -- 12/18
                     {
-                        sib.left.color = 0;
-                        sib.color = 1;
-                        this._rightRot(sib);
-                        sib = parent.right; //assign rightChild of parent to sib
-                    }
-                    else
-                    {
+						 if (sib.right.color == 0)
+						 {
+							sib.left.color = 0;
+							sib.color = 1;
+							this._rightRot(sib);
+							sib = parent.right; //assign rightChild of parent to sib
+						 }
+						 
                         sib.color = parent.color;
                         parent.color = 0;
                         sib.right.color = 0;
@@ -310,15 +313,16 @@ namespace FortuneAlgo
                         sib.color = 1;
                         x = parent; //assign parent of x to x
                     }
-                    else if (sib.left.color == 0)
-                    {
-                        sib.right.color = 0;
-                        sib.color = 1;
-                        this._leftRot(sib);
-                        sib = parent.left; //assign left of parent to sib
-                    }
-                    else
-                    {
+                    else  // changed because this is an error when I originally typed it -- 12/18
+					{
+						if (sib.left.color == 0)
+						{
+							sib.right.color = 0;
+							sib.color = 1;
+							this._leftRot(sib);
+							sib = parent.left; //assign left of parent to sib
+						}
+                    
                         sib.color = parent.color;
                         parent.color = 0;
                         sib.left.color = 0;
