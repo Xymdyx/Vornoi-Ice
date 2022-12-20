@@ -7,15 +7,9 @@
 https://math.stackexchange.com/questions/2700033/explanation-of-method-for-finding-the-intersection-of-two-parabolas
 https://blog.ivank.net/fortunes-algorithm-and-implementation.html
 https://jacquesheunis.com/post/fortunes-algorithm/
-https://stackoverflow.com/questions/9612065/breakpoint-convergence-in-fortunes-algorithm
 https://stackoverflow.com/questions/16695440/boost-intrusive-binary-search-trees/18264705
 https://www.boost.org/doc/libs/1_80_0/boost/polygon/voronoi_builder.hpp
-https://www.emathhelp.net/calculators/algebra-2/parabola-calculator/ -- parabola resources
-parabola calculator: https://www.omnicalculator.com/math/parabola
-geogebra intersection tool: https://www.geogebra.org/m/bduwwjqn
-circumcenter calculator: https://www.omnicalculator.com/math/circumcenter-of-a-triangle
 https://www.boost.org/doc/libs/1_80_0/boost/polygon/voronoi_builder.hpp
-https://www.geeksforgeeks.org/find-height-binary-tree-represented-parent-array/ get height of BST Node of element in sorted array in O(n) time
 helpful for sorted dictionary approach
 https://github.com/pvigier/FortuneAlgorithm
 https://github.com/Zalgo2462/VoronoiLib/tree/6e468f60e2129fff8201ffd0b0b9f4777e2892aa/VoronoiLib
@@ -54,9 +48,6 @@ namespace FortuneAlgo
     {
         /*------------------------------- FIELDS -------------------------------*/
 
-        public static float _toleranceThreshold = 1e-3f;
-		private const float _beachlineBoost = 10e6f;
-        private const float _convergeDivisor = 10f;
         private int _siteCount;
         private List<Vector2> _sites;
         private MaxHeap<VoronoiEvent> _pq;
@@ -90,20 +81,6 @@ namespace FortuneAlgo
         }
 
         /*------------------------------- UTIL METHODS -------------------------------*/
-        /*
-        * gets Euclidean Distance of 2 sites if it's the desired distance metric 
-        */
-        private float computeEuclidDist(Vector2 s1, Vector2 s2)
-        {
-            return Vector2.Distance(s1, s2);
-        }
-
-		/* checks if a difference is nearly zero*/
-		private bool aroundZero(float diff)
-		{
-			return (Math.Abs(diff) <= _toleranceThreshold);
-		}
-
         /* set two half edges as each other's twins */
         private void setHETwins(HalfEdge he1, HalfEdge he2)
         {
@@ -170,60 +147,6 @@ namespace FortuneAlgo
         }
 
         /*------------------------------- FORTUNE ALGO COMMON METHODS -------------------------------*/
-        /*
-         * get parabola from site(focus) and sweepline(directrix). Site event
-         * if F = (f1,f2)
-         * d = ax + by + c
-         * P = (x,y)... we get |PF|^2 = |PD|^2
-         * parab eqn = (ax + by + c)^2 / (a^2 + b^2) = (x - f1)^2 + (y - f2)^2
-         * LHS = Hesse Normal Form of line to get distance |Pl|.. We manipulate this below
-         * https://en.wikipedia.org/wiki/Parabola#Definition_as_a_locus_of_points
-         * https://jacquesheunis.com/post/fortunes-algorithm/
-         */
-        public float yOnParabFromSiteAndX(Vector2 site, float sweepCoord, float x)
-        {
-            // given our defn of f and the dir, we can do this given an x coord
-            // for d as y = yd and f = (f1,f2), we can find yp (parabola yCoord) st
-            // yp = ( (x - f1)^2 / 2(f2 - yd) ) + (f2 + yd)/2
-            float ypTerm1 = (float)Math.Pow(x - site.X, 2) / (float)(2 * (site.Y - sweepCoord));
-            float ypTerm2 = (site.Y + sweepCoord) / 2;
-            return ypTerm1 + ypTerm2;
-        }
-
-        /*
-        * intersection of 2 parabs...aka getting the breakpoint between 2 sites
-        * via computing parabola intersection given coord of sweepLine
-        * Computed every time we need to determine if an inserted arc + or - of one in the RBT.
-        * https://math.stackexchange.com/questions/2700033/explanation-of-method-for-finding-the-intersection-of-two-parabolas
-        * https://github.com/jacobdweightman/fortunes-algorithm/blob/master/js/breakpoint.js -- Credited
-        */
-        public float getBreakPtX(Vector2 s1, Vector2 s2, float sweepCoord)
-        {
-            // given y =  a1x^2 + b1x + c1, y =  a2x^2 + b2^x + c2
-            // solve (a1 - a2)x^2 + (b1 - b2)y + (c1 - c2)
-            // solve quad formula
-            float a = s2.Y - s1.Y;
-            float b = 2 * (s2.X * (s1.Y - sweepCoord) - (s1.X * (s2.Y - sweepCoord)));
-            float c = (s1.X * s1.X * (s2.Y - sweepCoord)) - (s2.X * s2.X)
-                * (s1.Y - sweepCoord) + ((s1.Y - s2.Y) * (s1.Y - sweepCoord) * (s2.Y - sweepCoord));
-
-            // if a=0, quadratic formula does not apply
-            if (Math.Abs(a) < _toleranceThreshold)
-                return -c / b;
-
-            float det = (float)Math.Sqrt(b * b - (4 * a * c));
-            float x1 = (-b + det) / (2 * a);
-            float x2 = (-b - det) / (2 * a);
-
-            //if (s1.X < x1 && x1 < s2.X)
-            //    return x1;
-
-            //return x2;
-            if (s1.Y < s2.Y)
-                return Math.Max(x1, x2);
-
-            return Math.Min(x1, x2);
-        }
 
         /// <summary>
         /// get the predecessor leaf of a given leaf node
@@ -281,83 +204,6 @@ namespace FortuneAlgo
 
         /*------------------------------- CIRCLE EVENT DETECTION METHODS -------------------------------*/
         /*
-         * given 3 points, computes circumcenter of their triangle
-         * so we can join the 2 Voronoi edges for bisectors (pi,pj) and (pj, pk) to it.
-         * schedules Voronoi Vertex events
-         * https://en.wikipedia.org/wiki/Circumscribed_circle#Circumcircle_equations
-         */
-        public Vector2 getCircumCenter(Vector2 s1, Vector2 s2, Vector2 s3)
-        {
-            if (s1 == default || s2 == default || s3 == default)
-                return default!;
-
-            float s1Scale = s1.X * s1.X + s1.Y * s1.Y;
-            float s2Scale = s2.X * s2.X + s2.Y * s2.Y;
-            float s3Scale = s3.X * s3.X + s3.Y * s3.Y;
-
-            // D = 2 * [Ax * (By - Cy) + Bx * (Cy - Ay) + Cx * (Ay - By)]
-            float d = 2 * (s1.X * (s2.Y - s3.Y) + s2.X * (s3.Y - s1.Y) + s3.X * (s1.Y - s2.Y));
-            //Cart Coords of CC Ux = [(Ax^2 + Ay^2) * (By - Cy) + (Bx^2 + By^2) * (Cy - Ay) + (Cx^2 + Cy^2) * (Ay - By)] / D
-            float Ux = (s1Scale * (s2.Y - s3.Y) + s2Scale * (s3.Y - s1.Y) + s3Scale * (s1.Y - s2.Y)) / d;
-            //Cart Coords of CC Uy = [(Ax^2 + Ay^2) * (Cx - Bx) + (Bx^2 + By^2) * (Ax - Cx) + (Cx^2 + Cy^2) * (Bx - Ax)] / D
-            float Uy = (s1Scale * (s3.X - s2.X) + s2Scale * (s1.X - s3.X) + s3Scale * (s2.X - s1.X)) / d;
-
-            return new Vector2(Ux, Uy);
-        }
-
-        /* 
-         * given RegionNodes bp1 and bp2 are part of a circle event, 
-         * detect if at a future arbitrary point
-         * that they become closer to the computed circumcircleCenter
-         * assuming we sweep top-down on the y-axis
-         * https://stackoverflow.com/questions/9612065/breakpoint-convergence-in-fortunes-algorithm
-         */
-        private bool checkIfCloserInFuture(Vector2 circCenter, RegionNode bp1, RegionNode bp2, float sweepCoord, float initDist)
-        {
-            // this increment is arbitrary,
-            // what's important is the distance closes for both breakpts
-            // as we approach the circumcircle's center
-            float sweepYIncrement = (circCenter.Y - sweepCoord) / _convergeDivisor;
-
-            //get future points
-            float futureSweepY = sweepCoord - sweepYIncrement;
-            float futureBp1X = getBreakPtX(bp1.regionSites[0], bp1.regionSites[1], futureSweepY);
-            float futureBp2X = getBreakPtX(bp2.regionSites[0], bp2.regionSites[1], futureSweepY);
-            Vector2 futureBp1 = new Vector2(futureBp1X, futureSweepY);
-            Vector2 futureBp2 = new Vector2(futureBp2X, futureSweepY);
-
-            bool futureBp1Closer = computeEuclidDist(futureBp1, circCenter) < initDist;
-            bool futureBp2Closer = computeEuclidDist(futureBp2, circCenter) < initDist;
-
-            return futureBp1Closer && futureBp2Closer;
-        }
-
-        /*
-         * given a start and end pts of a line, determine if a point is right of the line defined by them
-         * right determined from start's perspective....Returns true if it's on the line as well.
-         *  https://stackoverflow.com/questions/9612065/breakpoint-convergence-in-fortunes-algorithm
-         */
-        public bool isRightOfLine(Vector2 start, Vector2 end, Vector2 point)
-        {
-            return ((end.X - start.X) * (point.Y - start.Y) - (end.Y - start.Y) * (point.X - start.X)) <= 0;
-        }
-
-        /*
-		* helper for detectCircleEvent
-		* check if two breakpoints of a consecutive triple converge....
-		* this means the bisectors that define them move in opposite directions and never intersect at the circumcenter
-        * breakpts converge if the center of the circle
-        * defined by the 3 sites is "in front" of the middle site
-        * check if circleCenter is right of the lines formed from the left and middle sites
-        * and the middle and right sites
-		* https://stackoverflow.com/questions/9612065/breakpoint-convergence-in-fortunes-algorithm
-		*/
-        private bool doesTripleConverge(Vector2 circCenter, Vector2 left, Vector2 mid, Vector2 right)
-        {
-            return isRightOfLine(left, mid, circCenter) && isRightOfLine(mid, right, circCenter);
-        }
-
-        /*
 		* determine if we have a circle event between 3 sites. 
 		* Get Distance between circumcenter and site then find min y value of circle.
 		* If it's below sweepline and the left and right breakpts converge, we've a circle event to add to the queue
@@ -386,17 +232,17 @@ namespace FortuneAlgo
             Vector2 s1 = leftArc.regionSites[0];
             Vector2 s2 = midArc.regionSites[0];
             Vector2 s3 = rightArc.regionSites[0];
-            Vector2 circCenter = getCircumCenter(s1, s2, s3);
+            Vector2 circCenter = FortuneMath.getCircumCenter(s1, s2, s3);
 
-            float dist1 = computeEuclidDist(s1, circCenter);
-            float dist2 = computeEuclidDist(s2, circCenter);
-            float dist3 = computeEuclidDist(s3, circCenter);
+            float dist1 = FortuneMath.computeEuclidDist(s1, circCenter);
+            float dist2 = FortuneMath.computeEuclidDist(s2, circCenter);
+            float dist3 = FortuneMath.computeEuclidDist(s3, circCenter);
 
             float diff12 = dist1 - dist2;
             float diff13 = dist1 - dist3;
             float diff23 = dist2 - dist3;
 
-            if (!(aroundZero(diff12)) || !(aroundZero(diff13)) || !(aroundZero(diff23)))
+            if (!(FortuneMath.aroundZero(diff12)) || !(FortuneMath.aroundZero(diff13)) || !(FortuneMath.aroundZero(diff23)))
             {
                 Console.WriteLine($"Computed distances in circleEvent don't check out for {s1} {s2} {s3}");
                 return false;
@@ -413,8 +259,8 @@ namespace FortuneAlgo
             RegionNode leftBp = left.parent.obj;
             RegionNode rightBp = right.parent.obj;
             // if these don't converge by either method, we don't want them...
-            if (!doesTripleConverge(circCenter, s1, s2, s3) &&
-                !checkIfCloserInFuture(circCenter, leftBp, rightBp, sweepCoord, dist1))
+            if (!FortuneMath.doesTripleConverge(circCenter, s1, s2, s3) &&
+                !FortuneMath.checkIfCloserInFuture(circCenter, leftBp, rightBp, sweepCoord, dist1))
                 return false;
 
             List<RBNode<RegionNode>> sortedLeaves = new List<RBNode<RegionNode>> { left, mid, right };
@@ -465,7 +311,7 @@ namespace FortuneAlgo
                     Console.WriteLine($"Supposed internal arc has {bpSites.Count} instead of 2 arcs.");
 
                 // bpX = getBreakPtX(bpSites[1], bpSites[0], piSite.Y); same as below
-                bpX = getBreakPtX(bpSites[0], bpSites[1], piSite.Y);
+                bpX = FortuneMath.getBreakPtX(bpSites[0], bpSites[1], piSite.Y);
                 if (piSite.X < bpX)
                 {
                     arcNode = arcNode.left;
@@ -500,7 +346,7 @@ namespace FortuneAlgo
             HalfEdge pipjHE = new();
             HalfEdge pjpiHE = new();
 
-            float breakPtY = yOnParabFromSiteAndX(pjSite, piSite.Y, piSite.X);
+            float breakPtY = FortuneMath.yOnParabFromSiteAndX(pjSite, piSite.Y, piSite.X);
             Vector2 breakPt = new Vector2(piSite.X, breakPtY);
 
             float pjKeyVal = float.MaxValue;
@@ -522,15 +368,15 @@ namespace FortuneAlgo
                 levelFactor += 1;
             }
 
-            float boostVal1 = (_beachlineBoost) / ((float) Math.Pow(_convergeDivisor,levelFactor));
-            float boostVal2 = (boostVal1) / _convergeDivisor;
+            float boostVal1 = (FortuneMath.KEYBOOST) / ((float) Math.Pow(FortuneMath.CONVERGEDIVISOR,levelFactor));
+            float boostVal2 = (boostVal1) / FortuneMath.CONVERGEDIVISOR;
             // 11/16 -- INSERT THE BREAKPT NODE FIRST so it can become an internal rather than a leaf...
             // ... verified 11/17.. still buggy.. 11/27
             // averaging works for piVal, boosting doesn't work long term. Consider keys not the approach for this
             if (piSite.X < pjSite.X)
             {
                 Console.WriteLine("Splitting toward left");
-                pipjVal = getBreakPtX(piSite, pjSite, piSite.Y);
+                pipjVal = FortuneMath.getBreakPtX(piSite, pjSite, piSite.Y);
                 pipjVal = (pjKeyVal == float.MaxValue) ? pjNode.key : pjKeyVal; ;
                 pjpiVal = pipjVal - (boostVal1);
                 upperPjVal = pipjVal + (boostVal1);
@@ -565,7 +411,7 @@ namespace FortuneAlgo
             Console.WriteLine("Splitting toward right");
 
             // Case 2:  pi.x >= pj.x... verified 11/17.. prepare to test
-            pjpiVal = getBreakPtX(pjSite, piSite, piSite.Y);
+            pjpiVal = FortuneMath.getBreakPtX(pjSite, piSite, piSite.Y);
 
             //try just doing average of pred and succ as new key val
             pjpiVal = (pjKeyVal == float.MaxValue) ? pjNode.key : pjKeyVal;
@@ -852,9 +698,9 @@ namespace FortuneAlgo
             //Clip every infinite edge.
             foreach (RegionNode edge in unBoundedBps)
             {
-                float bpX = getBreakPtX(edge.regionSites[0], edge.regionSites[1], minY);
-                float bpY = yOnParabFromSiteAndX(edge.regionSites[0], minY, bpX);
-                float bpY2 = yOnParabFromSiteAndX(edge.regionSites[1], minY, bpX);
+                float bpX = FortuneMath.getBreakPtX(edge.regionSites[0], edge.regionSites[1], minY);
+                float bpY = FortuneMath.yOnParabFromSiteAndX(edge.regionSites[0], minY, bpX);
+                float bpY2 = FortuneMath.yOnParabFromSiteAndX(edge.regionSites[1], minY, bpX);
                 Vector2 bpVec = new(bpX, bpY);
                 edge.fillInfiniteEndPt(bpVec);
             }
