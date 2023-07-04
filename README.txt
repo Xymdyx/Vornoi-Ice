@@ -3,7 +3,8 @@ After construction, the player can see the Voronoi Diagram from an overhead view
 All online demos of VDs that I've seen don't allow users to walk on them so I thought I'd do it.
 This version uses an outside Fortune's algorithm implementation while I repair mine.
 
-Online WEBgl Version Here: https://people.rit.edu/~stf8464/CSCI-716-FINAL/Voronoi-Ice-WEBGL/
+Online WebGL Version Here:
+https://xymdyx.github.io/Vornoi-Ice/
 
 
 If the WebGL version is laggy, you can copy and paste the windows-build folder and launch the "Voronoitic.exe" inside the folder without needing Unity installed.
