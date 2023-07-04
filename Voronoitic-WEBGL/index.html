@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Unity WebGL Player | Voronoitic</title>
+    <link rel="shortcut icon" href="TemplateData/favicon.ico">
+    <link rel="stylesheet" href="TemplateData/style.css">
+  </head>
+  <body>
+    <div id="unity-container" class="unity-desktop">
+      <canvas id="unity-canvas" width=960 height=600></canvas>
+      <div id="unity-loading-bar">
+        <div id="unity-logo"></div>
+        <div id="unity-progress-bar-empty">
+          <div id="unity-progress-bar-full"></div>
+        </div>
+      </div>
+      <div id="unity-warning"> </div>
+      <div id="unity-footer">
+        <div id="unity-webgl-logo"></div>
+        <div id="unity-fullscreen-button"></div>
+        <div id="unity-build-title">Voronoitic</div>
+      </div>
+    </div>
+    <script>
+      var container = document.querySelector("#unity-container");
+      var canvas = document.querySelector("#unity-canvas");
+      var loadingBar = document.querySelector("#unity-loading-bar");
+      var progressBarFull = document.querySelector("#unity-progress-bar-full");
+      var fullscreenButton = document.querySelector("#unity-fullscreen-button");
+      var warningBanner = document.querySelector("#unity-warning");
+
+      // Shows a temporary message banner/ribbon for a few seconds, or
+      // a permanent error message on top of the canvas if type=='error'.
+      // If type=='warning', a yellow highlight color is used.
+      // Modify or remove this function to customize the visually presented
+      // way that non-critical warnings and error messages are presented to the
+      // user.
+      function unityShowBanner(msg, type) {
+        function updateBannerVisibility() {
+          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
+        }
+        var div = document.createElement('div');
+        div.innerHTML = msg;
+        warningBanner.appendChild(div);
+        if (type == 'error') div.style = 'background: red; padding: 10px;';
+        else {
+          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
+          setTimeout(function() {
+            warningBanner.removeChild(div);
+            updateBannerVisibility();
+          }, 5000);
+        }
+        updateBannerVisibility();
+      }
+
+      var buildUrl = "Build";
+      var loaderUrl = buildUrl + "/Voronoi-Ice-WEBGL.loader.js";
+      var config = {
+        dataUrl: buildUrl + "/Voronoi-Ice-WEBGL.data",
+        frameworkUrl: buildUrl + "/Voronoi-Ice-WEBGL.framework.js",
+        codeUrl: buildUrl + "/Voronoi-Ice-WEBGL.wasm",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "DefaultCompany",
+        productName: "Voronoitic",
+        productVersion: "0.5",
+        showBanner: unityShowBanner,
+      };
+
+      // By default Unity keeps WebGL canvas render target size matched with
+      // the DOM size of the canvas element (scaled by window.devicePixelRatio)
+      // Set this to false if you want to decouple this synchronization from
+      // happening inside the engine, and you would instead like to size up
+      // the canvas DOM size and WebGL render target sizes yourself.
+      // config.matchWebGLToCanvasSize = false;
+
+      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        // Mobile device style: fill the whole browser client area with the game canvas:
+
+        var meta = document.createElement('meta');
+        meta.name = 'viewport';
+        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
+        document.getElementsByTagName('head')[0].appendChild(meta);
+        container.className = "unity-mobile";
+        canvas.className = "unity-mobile";
+
+        // To lower canvas resolution on mobile devices to gain some
+        // performance, uncomment the following line:
+        // config.devicePixelRatio = 1;
+
+        unityShowBanner('WebGL builds are not supported on mobile devices.');
+      } else {
+        // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
+
+        canvas.style.width = "960px";
+        canvas.style.height = "600px";
+      }
+
+      loadingBar.style.display = "block";
+
+      var script = document.createElement("script");
+      script.src = loaderUrl;
+      script.onload = () => {
+        createUnityInstance(canvas, config, (progress) => {
+          progressBarFull.style.width = 100 * progress + "%";
+        }).then((unityInstance) => {
+          loadingBar.style.display = "none";
+          fullscreenButton.onclick = () => {
+            unityInstance.SetFullscreen(1);
+          };
+        }).catch((message) => {
+          alert(message);
+        });
+      };
+      document.body.appendChild(script);
+</script>
+	<!--This works but it just needs to be moved below the game canvas
+	https://www.w3schools.com/css/css_positioning.asp-->
+	<!--https://antongerdelan.net/colour/
+	https://stackoverflow.com/questions/40623920/how-to-keep-content-in-position-when-zooming-in-and-out-on-your-browser-->
+	<style>
+	div.desc{
+	position: absolute;
+	margin: 0 auto;
+	top: 8vh;
+	left: 2vw;
+	width: 15vw;
+	height: 85vh;
+	border: 3px solid #0CA9C9;
+	}
+	
+	div.aboutVDs{
+	position: absolute;
+	top: 8vh;
+	right: 2vw;
+	width: 15vw;
+	height: 85vh;
+	border: 3px solid #3B0056;
+	}
+	
+	div.Fortune{
+	position: absolute;
+	top: 94vh;
+	left: 20vw;
+	display: inline;
+	border: 3px solid #579B5B;
+	<!--width: 60vw;-->
+	<!--height: 160vh;-->
+	}
+	</style>
+	<br>
+	<div id="project-desc" class="desc" >
+	<h2><a href="https://github.com/Xymdyx/Vornoi-Ice" target="_blank">Voronoitic</a> Description</h2>
+	<p>Voronoitic is a first-person game in which one can plant Voronoi seeds on an ice rink and then visualize a Voronoi Diagram (VD).</p>
+	<p>After construction, the player can see the Voronoi Diagram from an overhead view or clear the current diagram and make a new one.</p>
+	<p>All online demos of VDs that I've seen don't allow users to walk on them so I thought I'd do it.</p>
+	<p>This version uses an outside <a href="https://github.com/Zalgo2462/VoronoiLib" target="_blank"> Fortune's algorithm implementation</a> while I repair mine.</p>
+	<h3>Controls</h3>
+	<p>Move - WASD/ Arrow keys</p>
+	<p>Jump - Space Bar</p>
+	<p>Place Site/Seed - F when stopped and grounded while constructing</p>
+	<p>Visualize VD - E after placing 2 - 300 sites</p>
+	<p>Switch Camera - Q only after visualizing a VD </p>
+	<p>Clear VD - C after visualizing a VD</p>
+	</div>
+	
+	<div id="about" class="aboutVDs">
+	<h2><a href="https://en.wikipedia.org/wiki/Voronoi_diagram" target="_blank">About Voronoi Diagrams</a></h2>
+	<p>Voronoi Diagrams are plane partitions in which every dot defines a <a href="https://en.wikipedia.org/wiki/Convex_polygon" target="_blank"> convex polygon</a> (called a Voronoi cell)
+	of all other points closest to that dot (called a site). </p>
+	<p>The lines/edges are equidistant to 2+ dots. The intersection of lines defines points equidistant to 3+ dots.</p>
+	<p>The <a href="https://en.wikipedia.org/wiki/Dual_graph" target="_blank"> planar dual</a> of a VD is a <a href="https://en.wikipedia.org/wiki/Delaunay_triangulation" target="_blank"> Delaunay Triangulation</a>.</p>
+	<p>Voronoi Diagrams are useful in computer graphics, AI, epidemiology, and figuring out where the nearest airport is.</p>
+	<p>Voronoi Diagrams are often constructed with 1000s upon 1000s of points so its important to be able to construct them quickly.</p>
+	<p>Scroll down to see pseudocode of Fortune's Algorithm for VDs. </p>
+	<h3>Group and Presentation</h3>
+	<p>I (Sam Ford) give a more thorough detailed explanation of VDs <a href="https://drive.google.com/file/d/16et9dm2SDodtPTtU73mvVOwXKPx1MxAR/view?usp=sharing" target="_blank"> here.</a> </p>
+	</div>
+	
+	<div id="fortunePC" class="Fortune">
+	<h3 style="text-align: center;"><a href="https://en.wikipedia.org/wiki/Fortune%27s_algorithm" target="_blank"> Fortune's Algorithm O(nlogn)</a>:</h3>
+	<h4>Fortune PseudoCode: </h4>
+	<p>1.Initialize event queue with all site coordinates (site events). Initialize beachline data structure.</p>
+	<p>2. while the event queue isn't empty: </p>
+	<p style="text-indent: 40px"> a. if site event: handleSiteEvent </p>
+	<p style="text-indent: 40px">  b. else valid circle event: handleCircleEvent </p>
+	<p style="text-indent: 20px">  c. pop next element from event queue </p>
+
+	<p>3. Remaining internal nodes in beachline are dangling edges. Extend out edges to clip them.</p>
+	<p>4. After clipping edges, draw bounding box around VD to box in the diagram. Extend outer edges to their closest box side.</p>
+	<p>5. Optionally, clip the boxed VD to another bounding box to effectively take a screenshot.</p>
+	<p>6. Return a <a href="https://en.wikipedia.org/wiki/Doubly_connected_edge_list" target="_blank"> doubly-connected edge list</a>  or just a list of edges. </p>
+	
+	<h5>Handle Site Event: </h5>
+	<p>1. If beachline empty, insert site pi into it (beachline now single leaf). Else, do steps 2-5.</p>
+	<p>2. Search beachline for parabola p vertically vertically above pi. If p has a circle event, deactivate it and remove it from event queue.</p>
+	
+	<p>3. Replace leaf of beachline that represents p with a subtree of 3 leaves. Middle leaf stores new site pi and the other two store site pj originally stored with p.
+	The two parent/internal nodes store the tuple of <pi,pj> and <pj,pi> to represent the left and right halves that are about to be traced out. Rebalance beachline if needed.</p>
+	
+	<p>4. Make new half-edges in VD Data structure for edge separating V(pi) and V(pj), which will be traced out by the two new breakpoints.</p>
+	<p>5. Check two triple of consecutive arcs for new circle events (where 3 sites are co-circular at a point beyond the sweepline). 
+	If the breakpoints converge (i.e both edges close in on the circumcircle center), add circle event to event queue with a reference to the middle node. 
+	The two checked triples are where the new site pi is the left site and right site respectively.</p>
+
+
+	<h5>Handle Circle Event: </h5>
+	<p>1. Delete the leaf l that represents the disappearing middle arc d from the beachline. Update relevant breakpoints/internal nodes. Rebalance beachline if necessary.
+	Delete all old circle events involving d from the event queue (via pointers to d's predecessor and successors). This circle event will be removed from the event queue shortly.</p>
+	
+	<p>2. Add center of the circle causing the event as a vertex record to the Voronoi Diagram datastructure if desired. 
+	Create two half-edges corresponding to new breakpoint of the beachline.
+	
+	Set pointers appropriately. Attach three new new records to half-edges that end at the circle center vertex we just added, i.e. the relevant next and prev pointers that define the Voronoi cell/polygon.</p>
+	<p>3. Check two new triples of consecutive arcs, one where d's former left neighbor (predecessor) is the middle arc and the other where d's former right neighbor (successor) is the middle arc.
+	Once again, if the triples converge, add the new circle events to the event queue and leave references to the appropriate middle arc.</p>
+	
+	<p>4. Note: Circle events are stored with the value of the circle center plus its radius to the circumcircle's edge along the appropriate sweep direction. 
+	This is conceptually the future point where the middle arc gets squeezed out.</p>
+
+	<h5><a href="https://jacquesheunis.com/post/fortunes-algorithm/" target="_blank"> Relevant Implementation Details:</a> </h5>
+	<p>1. Sweep-axis: Recall Fortune's algorithm only works in 2D. 
+	We can sweep along the x or y axis but we must account for our choice in our program(namely the event queue and circle event detection).
+	Regardless, any sweep-axis and sweep-direction should yield the same VD. </p>
+
+	<p>2. Event queue: Stores site events/ circle events based on one's sweep direction.
+	Use a max heap for sweeping from max value to min value along sweep axis. Use a min heap for sweeping from min to max. </p>
+	
+	<p>3. Events: All site events are known from the start and we initialize our event queue with them by relevant sweep axis value. We add/remove circle events during the main loop.</p>
+	
+	<p>4. Beachline: Stores the sites and conceptually their parabolas. Read from left-right, the beachline reflects where parabolas are place along the beachline,
+	which is a union of parabolas. Necessary to catch circle events and to compute the edges of the Voronoi Diagram. Should be a sorted dictionary, i.e a self-balancing 
+	binary search tree or a skiplist to achieve the O(n logn) time complexity. Linked list may be used but it will result in a time complexity of O(n^2).</p>
+	
+	<p>5. Beachline content: Only sites need to be stored since we can compute all the complicated map from the site's coordinate that isn't the sweep axis and the 
+	current sweep line coordinate value. One can also store only parabolas as this has been done in other variations of Fortune's algorithm.
+
+	</div>
+  </body>
+</html>
